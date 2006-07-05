@@ -9,28 +9,28 @@
 
 enum // indices into capture->data[...], to the 8 data bits
 {
-    SCOPE_clk1 = 17,
-    SCOPE_clk2 = 16,
+    PROBE_clk1 = 17,
+    PROBE_clk2 = 16,
 
-    SCOPE_c0 = 15,
-    SCOPE_c1 = 14,
-    SCOPE_c2 = 13,
-    SCOPE_c3 = 12,
+    PROBE_c0 = 15,
+    PROBE_c1 = 14,
+    PROBE_c2 = 13,
+    PROBE_c3 = 12,
 
-    SCOPE_d0 = 11,
-    SCOPE_d1 = 10,
-    SCOPE_d2 = 9,
-    SCOPE_d3 = 8,
+    PROBE_d0 = 11,
+    PROBE_d1 = 10,
+    PROBE_d2 = 9,
+    PROBE_d3 = 8,
 
-    SCOPE_a0 = 7,
-    SCOPE_a1 = 6,
-    SCOPE_a2 = 5,
-    SCOPE_a3 = 4,
+    PROBE_a0 = 7,
+    PROBE_a1 = 6,
+    PROBE_a2 = 5,
+    PROBE_a3 = 4,
 
-    SCOPE_e0 = 3,
-    SCOPE_e1 = 2,
-    SCOPE_e2 = 1,
-    SCOPE_e3 = 0,
+    PROBE_e0 = 3,
+    PROBE_e1 = 2,
+    PROBE_e2 = 1,
+    PROBE_e3 = 0,
 };
 
 
@@ -83,6 +83,13 @@ typedef struct
 
 int dump_capture (bulk_capture *c);
 void dump_capture_list (list_t *capture, char *name, list_t *channels);
+
+// returns 0, or 1 depending on whether the bit from the capture corresponding to 
+// 'channel_name' (from the channels list) was set
+int capture_bit (capture *c, char *channel_name, list_t *channels);
+// retrieves 1 bit from the capture, from probe 'probe' ( see the PROBE_ structure) index 'index'
+int capture_bit_raw (capture *c, int probe, int index);
+
 bulk_capture *build_dump (unsigned char *data, int length);
 channel_info *build_channel (char *probe, char *name);
 
@@ -90,6 +97,7 @@ int capture_compare (list_t *data1, list_t *data2, char *file1, char *file2);
 
 stream_info_t *build_stream_info (list_t *data, char *filename);
 void compare_streams (stream_info_t *s1, stream_info_t *s2);
+
 
 extern list_t *datasets;
 extern list_t *channels;

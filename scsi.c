@@ -61,12 +61,6 @@ static struct scsi_cmd scsi_commands [] = {
 };
 #define SCSI_COMMAND_LEN (sizeof (scsi_commands) / sizeof (scsi_commands[0]))
 
-static int get_bit (capture *c, int channel, int index)
-{
-    return (c->data[channel] & (1 << index)) ? 1 : 0;
-}
-
-
 static uint8_t printable_char (int data)
 {
     if (data >= ' ' && data <= 126)
@@ -93,7 +87,7 @@ static char ebcdic_to_ascii (unsigned char c)
 }
 #endif
 
-static void dump_buffer (unsigned char *buffer, int len)
+static void dump_buffer (unsigned char *buffer, int len, int length_so_far)
 {
     int i;
 
@@ -103,6 +97,9 @@ static void dump_buffer (unsigned char *buffer, int len)
 	printf ("%c", printable_char (buffer[i]));
 	//printf ("%c", printable_char (ebcdic_to_ascii (buffer[i])));
     }
+
+    if (length_so_far)
+	printf ("\n\tLength: %d", length_so_far);
 }
 
 static unsigned char flip (unsigned char ch)
@@ -135,7 +132,7 @@ static void decode_scsi_command (unsigned char *buf)
     }
 }
 
-static void parse_scsi_cap (capture *c, capture *prev)
+static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 {
     static int last_cmd = -1;
     static unsigned char buffer[20];
@@ -146,26 +143,29 @@ static void parse_scsi_cap (capture *c, capture *prev)
 	return;
     
     // nbsy is low, and nack goes from low to high
-    if (!get_bit (c, SCOPE_c2, 7) && get_bit (c, SCOPE_c2, 6) && !get_bit (prev, SCOPE_c2, 6))
+    if (!capture_bit (c, "nBSY", channels) && 
+	capture_bit (c, "nACK", channels) &&
+	!capture_bit (prev, "nACK", channels))
     {
 	int cmd = 0;
 	int ch;
 
-	cmd  |= get_bit (c, SCOPE_c2, 4) << 2;
-	cmd  |= get_bit (c, SCOPE_c2, 2) << 1;
-	cmd  |= get_bit (c, SCOPE_c2, 0) << 0;
+	cmd |= capture_bit (c, "nMSG", channels) << 2;
+	cmd |= capture_bit (c, "nC_D", channels) << 1;
+	cmd |= capture_bit (c, "nIO", channels) << 0;
 	cmd = (~cmd) & 0x7; // invert, since signals are negative logic
 
 	if (cmd != last_cmd)
 	{
-	    dump_buffer (buffer, buffer_len);
+	    dump_buffer (buffer, buffer_len, last_cmd_len);
 	    if (last_cmd == 2) // "COMMAND" 
 		decode_scsi_command (buffer);
 	    buffer_len = 0;
-	    printf ("\nlen: %d\n%s\n\t", last_cmd_len, scsi_phases[cmd]);
 	    last_cmd_len = 0;
+	    printf ("\n%s\n\t", scsi_phases[cmd]);
 	}
-	ch = flip (c->data[SCOPE_e0]);
+#warning "Data probe hard coded"
+	ch = flip (c->data[PROBE_e0]);
 	ch = (~ch) & 0xff; // invert data lines?
 	last_cmd_len++;
 
@@ -174,7 +174,7 @@ static void parse_scsi_cap (capture *c, capture *prev)
 	buffer_len++;
 	if (buffer_len == 16)
 	{
-	    dump_buffer (buffer, buffer_len);
+	    dump_buffer (buffer, buffer_len, 0);
 	    buffer_len = 0;
 	    printf ("\n\t");
 	}
@@ -182,19 +182,19 @@ static void parse_scsi_cap (capture *c, capture *prev)
     }
    
     // nbsy went high, end of transaction 
-    if (get_bit (c, SCOPE_c2, 7) && !get_bit (prev, SCOPE_c2, 7))
+    if (capture_bit (c, "nBSY", channels) && !capture_bit (prev, "nBSY", channels))
     {
-	dump_buffer (buffer, buffer_len);
+	dump_buffer (buffer, buffer_len, last_cmd_len);
 	if (last_cmd == 2) // "COMMAND" 
 	    decode_scsi_command (buffer);
-	printf ("\n-----------");
-	last_cmd = -1;
 	last_cmd_len = 0;
 	buffer_len = 0;
+	printf ("\n-----------");
+	last_cmd = -1;
     }
 }
 
-static void parse_scsi_bulk_cap (bulk_capture *b)
+static void parse_scsi_bulk_cap (bulk_capture *b, list_t *channels)
 {
     int i;
     capture *c, *prev = NULL;
@@ -203,7 +203,7 @@ static void parse_scsi_bulk_cap (bulk_capture *b)
 
     for (i = 0; i < b->length / sizeof (capture); i++)
     {
-	parse_scsi_cap (c, prev);
+	parse_scsi_cap (c, prev, channels);
 	prev = c;
 	c++;
     }
@@ -212,11 +212,14 @@ static void parse_scsi_bulk_cap (bulk_capture *b)
 void parse_scsi (list_t *cap, char *filename, list_t *channels)
 {
     list_t *n;
-    printf ("SCSI analysis of file: '%s'\n", filename);
+    int i;
 
-    for (n = cap; n != NULL; n = n->next)
+    printf ("SCSI analysis of file: '%s'", filename);
+
+    for (n = cap, i = 0; n != NULL; n = n->next, i++)
     {
-	parse_scsi_bulk_cap (n->data);
+	printf ("\nParsing capture block %d", i);
+	parse_scsi_bulk_cap (n->data, channels);
     }
 
 }

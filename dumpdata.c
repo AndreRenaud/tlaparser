@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,56 @@ void dump_capture_list (list_t *cap, char *name, list_t *channels)
     }
 }
 
+int capture_bit_raw (capture *cap, int probe, int index)
+{
+    return (cap->data[probe] & (1 << index)) ? 1 : 0;
+}
+
+int capture_bit (capture *cap, char *channel_name, list_t *channels)
+{
+    list_t *n;
+
+    for (n = channels; n!= NULL; n = n->next)
+    {
+	channel_info *c = n->data;
+	if (strcmp (c->name, channel_name) == 0)
+	{
+	    char *probes={"EADC"};
+	    int i;
+	    int probe = -1;
+	    int index;
+
+	    if (strlen (c->probe_name) != 4 || c->probe_name[2] != '_')
+	    {
+		printf ("Weird probe: %s\n", c->probe_name);
+		return -1;
+	    }
+
+	    index = c->probe_name[3] - '0';
+
+
+	    for (i = 0; i < 4; i++)
+		if (probes[i] == toupper (c->probe_name[0]))
+		    probe = i * 4;
+	    if (probe == -1)
+	    {
+		printf ("Can't identify probe %s\n", c->probe_name);
+		return -1;
+	    }
+
+	    probe += (3 - (c->probe_name[1] - '0'));
+
+	    //printf ("Probe %s = %d, index=%d, channel=%s\n", c->probe_name, probe, index, channel_name);
+
+	    return capture_bit_raw (cap, probe, index);
+	    //return (cap->data[probe] & (1 << index)) ? 1 : 0;
+	}
+    }
+
+    printf ("Unknown channel: %s\n", channel_name);
+    return -1;
+}
+
 channel_info *build_channel (char *probe, char *name)
 {
     channel_info *retval;
@@ -74,7 +125,15 @@ channel_info *build_channel (char *probe, char *name)
     retval = malloc (sizeof (channel_info));
     strncpy (retval->probe_name, probe, 20);
     retval->probe_name[19] = '\0';
-    strncpy (retval->name, name, 20);
+
+    // they seem to have leading & trailing $ signs on them, so chop them off if they're there
+    if (name[0] == '$' && name[strlen(name) - 1] == '$')
+    {
+	strncpy (retval->name, &name[1], strlen(name) - 2);
+	retval->name[strlen(name) - 2] = '\0';
+    }
+    else
+	strncpy (retval->name, name, 20);
     retval->name[19] = '\0';
 
     return retval;
