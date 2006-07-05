@@ -1,0 +1,1050 @@
+Terminals which are not used
+
+   t_MINUS
+   t_PLUS
+   t_DOT
+   t_BINARY_HEADER
+
+
+Grammar
+
+    0 $accept: tlafile $end
+
+    1 tlafile: t_PREAMBLE cell_list
+
+    2 composite_cell: t_COMPOSITE_CELL t_STRING t_STRING block
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number t_RBRACE
+
+    4 array_cell: t_ARRAY_CELL t_STRING t_STRING block
+
+    5 string_cell: t_STRING_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_STRING t_RBRACE
+
+    6 long_cell: t_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+    8 boolean_cell: t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_BOOL t_RBRACE
+
+    9 double_cell: t_DOUBLE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE
+
+   10 rda_internal: t_RDA_INTERNAL t_STRING t_STRING block
+
+   11 channel_cell: t_CHANNEL_CELL t_STRING t_STRING block
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+   13 cap_root: t_CAP_ROOT t_STRING t_STRING block
+
+   14 cblock: t_C t_STRING t_STRING block
+
+   15 block: t_LBRACE cell_list t_RBRACE
+   16      | t_EQUALS t_DATASET
+
+   17 cell_list: cell cell_list
+   18          | /* empty */
+
+   19 cell: composite_cell
+   20     | byte_cell
+   21     | array_cell
+   22     | string_cell
+   23     | long_cell
+   24     | long_long_cell
+   25     | boolean_cell
+   26     | double_cell
+   27     | channel_cell
+   28     | cap_root
+   29     | cblock
+   30     | rda_internal
+   31     | ccm_time_per_div
+
+   32 number: t_NUMBER
+
+   33 ident: t_IDENT
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+error (256)
+t_STRING (258) 2 3 4 5 6 7 8 9 10 11 12 13 14
+t_IDENT (259) 33
+t_C (260) 14
+t_DATASET (261) 16
+t_NUMBER (262) 32
+t_BOOL (263) 8
+t_LBRACE (264) 3 5 6 7 8 9 12 15
+t_RBRACE (265) 3 5 6 7 8 9 12 15
+t_EQUALS (266) 3 5 6 7 8 9 12 16
+t_MINUS (267)
+t_PLUS (268)
+t_DOT (269)
+t_BINARY_HEADER (270)
+t_PREAMBLE (271) 1
+t_COMPOSITE_CELL (272) 2
+t_STRING_CELL (273) 5
+t_ARRAY_CELL (274) 4
+t_BYTE_CELL (275) 3
+t_LONG_CELL (276) 6
+t_LONG_LONG_CELL (277) 7
+t_BOOLEAN_CELL (278) 8
+t_DOUBLE_CELL (279) 9
+t_CHANNEL_CELL (280) 11
+t_RDA_INTERNAL (281) 10
+t_CCM_TIME_PER_DIV (282) 12
+t_CAP_ROOT (283) 13
+
+
+Nonterminals, with rules where they appear
+
+$accept (29)
+    on left: 0
+tlafile (30)
+    on left: 1, on right: 0
+composite_cell (31)
+    on left: 2, on right: 19
+byte_cell (32)
+    on left: 3, on right: 20
+array_cell (33)
+    on left: 4, on right: 21
+string_cell (34)
+    on left: 5, on right: 22
+long_cell (35)
+    on left: 6, on right: 23
+long_long_cell (36)
+    on left: 7, on right: 24
+boolean_cell (37)
+    on left: 8, on right: 25
+double_cell (38)
+    on left: 9, on right: 26
+rda_internal (39)
+    on left: 10, on right: 30
+channel_cell (40)
+    on left: 11, on right: 27
+ccm_time_per_div (41)
+    on left: 12, on right: 31
+cap_root (42)
+    on left: 13, on right: 28
+cblock (43)
+    on left: 14, on right: 29
+block (44)
+    on left: 15 16, on right: 2 4 10 11 13 14
+cell_list (45)
+    on left: 17 18, on right: 1 15 17
+cell (46)
+    on left: 19 20 21 22 23 24 25 26 27 28 29 30 31,
+    on right: 17
+number (47)
+    on left: 32, on right: 3 6 7 9 12
+ident (48)
+    on left: 33, on right: 7 12
+
+
+state 0
+
+    0 $accept: . tlafile $end
+
+    t_PREAMBLE  shift, and go to state 1
+
+    tlafile  go to state 2
+
+
+state 1
+
+    1 tlafile: t_PREAMBLE . cell_list
+
+    t_C                 shift, and go to state 3
+    t_COMPOSITE_CELL    shift, and go to state 4
+    t_STRING_CELL       shift, and go to state 5
+    t_ARRAY_CELL        shift, and go to state 6
+    t_BYTE_CELL         shift, and go to state 7
+    t_LONG_CELL         shift, and go to state 8
+    t_LONG_LONG_CELL    shift, and go to state 9
+    t_BOOLEAN_CELL      shift, and go to state 10
+    t_DOUBLE_CELL       shift, and go to state 11
+    t_CHANNEL_CELL      shift, and go to state 12
+    t_RDA_INTERNAL      shift, and go to state 13
+    t_CCM_TIME_PER_DIV  shift, and go to state 14
+    t_CAP_ROOT          shift, and go to state 15
+
+    $default  reduce using rule 18 (cell_list)
+
+    composite_cell    go to state 16
+    byte_cell         go to state 17
+    array_cell        go to state 18
+    string_cell       go to state 19
+    long_cell         go to state 20
+    long_long_cell    go to state 21
+    boolean_cell      go to state 22
+    double_cell       go to state 23
+    rda_internal      go to state 24
+    channel_cell      go to state 25
+    ccm_time_per_div  go to state 26
+    cap_root          go to state 27
+    cblock            go to state 28
+    cell_list         go to state 29
+    cell              go to state 30
+
+
+state 2
+
+    0 $accept: tlafile . $end
+
+    $end  shift, and go to state 31
+
+
+state 3
+
+   14 cblock: t_C . t_STRING t_STRING block
+
+    t_STRING  shift, and go to state 32
+
+
+state 4
+
+    2 composite_cell: t_COMPOSITE_CELL . t_STRING t_STRING block
+
+    t_STRING  shift, and go to state 33
+
+
+state 5
+
+    5 string_cell: t_STRING_CELL . t_STRING t_STRING t_EQUALS t_LBRACE t_STRING t_RBRACE
+
+    t_STRING  shift, and go to state 34
+
+
+state 6
+
+    4 array_cell: t_ARRAY_CELL . t_STRING t_STRING block
+
+    t_STRING  shift, and go to state 35
+
+
+state 7
+
+    3 byte_cell: t_BYTE_CELL . t_STRING t_STRING t_EQUALS t_LBRACE number number number t_RBRACE
+
+    t_STRING  shift, and go to state 36
+
+
+state 8
+
+    6 long_cell: t_LONG_CELL . t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE
+
+    t_STRING  shift, and go to state 37
+
+
+state 9
+
+    7 long_long_cell: t_LONG_LONG_CELL . t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+    t_STRING  shift, and go to state 38
+
+
+state 10
+
+    8 boolean_cell: t_BOOLEAN_CELL . t_STRING t_STRING t_EQUALS t_LBRACE t_BOOL t_RBRACE
+
+    t_STRING  shift, and go to state 39
+
+
+state 11
+
+    9 double_cell: t_DOUBLE_CELL . t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE
+
+    t_STRING  shift, and go to state 40
+
+
+state 12
+
+   11 channel_cell: t_CHANNEL_CELL . t_STRING t_STRING block
+
+    t_STRING  shift, and go to state 41
+
+
+state 13
+
+   10 rda_internal: t_RDA_INTERNAL . t_STRING t_STRING block
+
+    t_STRING  shift, and go to state 42
+
+
+state 14
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV . t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+    t_STRING  shift, and go to state 43
+
+
+state 15
+
+   13 cap_root: t_CAP_ROOT . t_STRING t_STRING block
+
+    t_STRING  shift, and go to state 44
+
+
+state 16
+
+   19 cell: composite_cell .
+
+    $default  reduce using rule 19 (cell)
+
+
+state 17
+
+   20 cell: byte_cell .
+
+    $default  reduce using rule 20 (cell)
+
+
+state 18
+
+   21 cell: array_cell .
+
+    $default  reduce using rule 21 (cell)
+
+
+state 19
+
+   22 cell: string_cell .
+
+    $default  reduce using rule 22 (cell)
+
+
+state 20
+
+   23 cell: long_cell .
+
+    $default  reduce using rule 23 (cell)
+
+
+state 21
+
+   24 cell: long_long_cell .
+
+    $default  reduce using rule 24 (cell)
+
+
+state 22
+
+   25 cell: boolean_cell .
+
+    $default  reduce using rule 25 (cell)
+
+
+state 23
+
+   26 cell: double_cell .
+
+    $default  reduce using rule 26 (cell)
+
+
+state 24
+
+   30 cell: rda_internal .
+
+    $default  reduce using rule 30 (cell)
+
+
+state 25
+
+   27 cell: channel_cell .
+
+    $default  reduce using rule 27 (cell)
+
+
+state 26
+
+   31 cell: ccm_time_per_div .
+
+    $default  reduce using rule 31 (cell)
+
+
+state 27
+
+   28 cell: cap_root .
+
+    $default  reduce using rule 28 (cell)
+
+
+state 28
+
+   29 cell: cblock .
+
+    $default  reduce using rule 29 (cell)
+
+
+state 29
+
+    1 tlafile: t_PREAMBLE cell_list .
+
+    $default  reduce using rule 1 (tlafile)
+
+
+state 30
+
+   17 cell_list: cell . cell_list
+
+    t_C                 shift, and go to state 3
+    t_COMPOSITE_CELL    shift, and go to state 4
+    t_STRING_CELL       shift, and go to state 5
+    t_ARRAY_CELL        shift, and go to state 6
+    t_BYTE_CELL         shift, and go to state 7
+    t_LONG_CELL         shift, and go to state 8
+    t_LONG_LONG_CELL    shift, and go to state 9
+    t_BOOLEAN_CELL      shift, and go to state 10
+    t_DOUBLE_CELL       shift, and go to state 11
+    t_CHANNEL_CELL      shift, and go to state 12
+    t_RDA_INTERNAL      shift, and go to state 13
+    t_CCM_TIME_PER_DIV  shift, and go to state 14
+    t_CAP_ROOT          shift, and go to state 15
+
+    $default  reduce using rule 18 (cell_list)
+
+    composite_cell    go to state 16
+    byte_cell         go to state 17
+    array_cell        go to state 18
+    string_cell       go to state 19
+    long_cell         go to state 20
+    long_long_cell    go to state 21
+    boolean_cell      go to state 22
+    double_cell       go to state 23
+    rda_internal      go to state 24
+    channel_cell      go to state 25
+    ccm_time_per_div  go to state 26
+    cap_root          go to state 27
+    cblock            go to state 28
+    cell_list         go to state 45
+    cell              go to state 30
+
+
+state 31
+
+    0 $accept: tlafile $end .
+
+    $default  accept
+
+
+state 32
+
+   14 cblock: t_C t_STRING . t_STRING block
+
+    t_STRING  shift, and go to state 46
+
+
+state 33
+
+    2 composite_cell: t_COMPOSITE_CELL t_STRING . t_STRING block
+
+    t_STRING  shift, and go to state 47
+
+
+state 34
+
+    5 string_cell: t_STRING_CELL t_STRING . t_STRING t_EQUALS t_LBRACE t_STRING t_RBRACE
+
+    t_STRING  shift, and go to state 48
+
+
+state 35
+
+    4 array_cell: t_ARRAY_CELL t_STRING . t_STRING block
+
+    t_STRING  shift, and go to state 49
+
+
+state 36
+
+    3 byte_cell: t_BYTE_CELL t_STRING . t_STRING t_EQUALS t_LBRACE number number number t_RBRACE
+
+    t_STRING  shift, and go to state 50
+
+
+state 37
+
+    6 long_cell: t_LONG_CELL t_STRING . t_STRING t_EQUALS t_LBRACE number t_RBRACE
+
+    t_STRING  shift, and go to state 51
+
+
+state 38
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING . t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+    t_STRING  shift, and go to state 52
+
+
+state 39
+
+    8 boolean_cell: t_BOOLEAN_CELL t_STRING . t_STRING t_EQUALS t_LBRACE t_BOOL t_RBRACE
+
+    t_STRING  shift, and go to state 53
+
+
+state 40
+
+    9 double_cell: t_DOUBLE_CELL t_STRING . t_STRING t_EQUALS t_LBRACE number t_RBRACE
+
+    t_STRING  shift, and go to state 54
+
+
+state 41
+
+   11 channel_cell: t_CHANNEL_CELL t_STRING . t_STRING block
+
+    t_STRING  shift, and go to state 55
+
+
+state 42
+
+   10 rda_internal: t_RDA_INTERNAL t_STRING . t_STRING block
+
+    t_STRING  shift, and go to state 56
+
+
+state 43
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING . t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+    t_STRING  shift, and go to state 57
+
+
+state 44
+
+   13 cap_root: t_CAP_ROOT t_STRING . t_STRING block
+
+    t_STRING  shift, and go to state 58
+
+
+state 45
+
+   17 cell_list: cell cell_list .
+
+    $default  reduce using rule 17 (cell_list)
+
+
+state 46
+
+   14 cblock: t_C t_STRING t_STRING . block
+
+    t_LBRACE  shift, and go to state 59
+    t_EQUALS  shift, and go to state 60
+
+    block  go to state 61
+
+
+state 47
+
+    2 composite_cell: t_COMPOSITE_CELL t_STRING t_STRING . block
+
+    t_LBRACE  shift, and go to state 59
+    t_EQUALS  shift, and go to state 60
+
+    block  go to state 62
+
+
+state 48
+
+    5 string_cell: t_STRING_CELL t_STRING t_STRING . t_EQUALS t_LBRACE t_STRING t_RBRACE
+
+    t_EQUALS  shift, and go to state 63
+
+
+state 49
+
+    4 array_cell: t_ARRAY_CELL t_STRING t_STRING . block
+
+    t_LBRACE  shift, and go to state 59
+    t_EQUALS  shift, and go to state 60
+
+    block  go to state 64
+
+
+state 50
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING . t_EQUALS t_LBRACE number number number t_RBRACE
+
+    t_EQUALS  shift, and go to state 65
+
+
+state 51
+
+    6 long_cell: t_LONG_CELL t_STRING t_STRING . t_EQUALS t_LBRACE number t_RBRACE
+
+    t_EQUALS  shift, and go to state 66
+
+
+state 52
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING . t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+    t_EQUALS  shift, and go to state 67
+
+
+state 53
+
+    8 boolean_cell: t_BOOLEAN_CELL t_STRING t_STRING . t_EQUALS t_LBRACE t_BOOL t_RBRACE
+
+    t_EQUALS  shift, and go to state 68
+
+
+state 54
+
+    9 double_cell: t_DOUBLE_CELL t_STRING t_STRING . t_EQUALS t_LBRACE number t_RBRACE
+
+    t_EQUALS  shift, and go to state 69
+
+
+state 55
+
+   11 channel_cell: t_CHANNEL_CELL t_STRING t_STRING . block
+
+    t_LBRACE  shift, and go to state 59
+    t_EQUALS  shift, and go to state 60
+
+    block  go to state 70
+
+
+state 56
+
+   10 rda_internal: t_RDA_INTERNAL t_STRING t_STRING . block
+
+    t_LBRACE  shift, and go to state 59
+    t_EQUALS  shift, and go to state 60
+
+    block  go to state 71
+
+
+state 57
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING . t_EQUALS t_LBRACE number number number number ident t_RBRACE
+
+    t_EQUALS  shift, and go to state 72
+
+
+state 58
+
+   13 cap_root: t_CAP_ROOT t_STRING t_STRING . block
+
+    t_LBRACE  shift, and go to state 59
+    t_EQUALS  shift, and go to state 60
+
+    block  go to state 73
+
+
+state 59
+
+   15 block: t_LBRACE . cell_list t_RBRACE
+
+    t_C                 shift, and go to state 3
+    t_COMPOSITE_CELL    shift, and go to state 4
+    t_STRING_CELL       shift, and go to state 5
+    t_ARRAY_CELL        shift, and go to state 6
+    t_BYTE_CELL         shift, and go to state 7
+    t_LONG_CELL         shift, and go to state 8
+    t_LONG_LONG_CELL    shift, and go to state 9
+    t_BOOLEAN_CELL      shift, and go to state 10
+    t_DOUBLE_CELL       shift, and go to state 11
+    t_CHANNEL_CELL      shift, and go to state 12
+    t_RDA_INTERNAL      shift, and go to state 13
+    t_CCM_TIME_PER_DIV  shift, and go to state 14
+    t_CAP_ROOT          shift, and go to state 15
+
+    $default  reduce using rule 18 (cell_list)
+
+    composite_cell    go to state 16
+    byte_cell         go to state 17
+    array_cell        go to state 18
+    string_cell       go to state 19
+    long_cell         go to state 20
+    long_long_cell    go to state 21
+    boolean_cell      go to state 22
+    double_cell       go to state 23
+    rda_internal      go to state 24
+    channel_cell      go to state 25
+    ccm_time_per_div  go to state 26
+    cap_root          go to state 27
+    cblock            go to state 28
+    cell_list         go to state 74
+    cell              go to state 30
+
+
+state 60
+
+   16 block: t_EQUALS . t_DATASET
+
+    t_DATASET  shift, and go to state 75
+
+
+state 61
+
+   14 cblock: t_C t_STRING t_STRING block .
+
+    $default  reduce using rule 14 (cblock)
+
+
+state 62
+
+    2 composite_cell: t_COMPOSITE_CELL t_STRING t_STRING block .
+
+    $default  reduce using rule 2 (composite_cell)
+
+
+state 63
+
+    5 string_cell: t_STRING_CELL t_STRING t_STRING t_EQUALS . t_LBRACE t_STRING t_RBRACE
+
+    t_LBRACE  shift, and go to state 76
+
+
+state 64
+
+    4 array_cell: t_ARRAY_CELL t_STRING t_STRING block .
+
+    $default  reduce using rule 4 (array_cell)
+
+
+state 65
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING t_EQUALS . t_LBRACE number number number t_RBRACE
+
+    t_LBRACE  shift, and go to state 77
+
+
+state 66
+
+    6 long_cell: t_LONG_CELL t_STRING t_STRING t_EQUALS . t_LBRACE number t_RBRACE
+
+    t_LBRACE  shift, and go to state 78
+
+
+state 67
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS . t_LBRACE number number number number ident t_RBRACE
+
+    t_LBRACE  shift, and go to state 79
+
+
+state 68
+
+    8 boolean_cell: t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS . t_LBRACE t_BOOL t_RBRACE
+
+    t_LBRACE  shift, and go to state 80
+
+
+state 69
+
+    9 double_cell: t_DOUBLE_CELL t_STRING t_STRING t_EQUALS . t_LBRACE number t_RBRACE
+
+    t_LBRACE  shift, and go to state 81
+
+
+state 70
+
+   11 channel_cell: t_CHANNEL_CELL t_STRING t_STRING block .
+
+    $default  reduce using rule 11 (channel_cell)
+
+
+state 71
+
+   10 rda_internal: t_RDA_INTERNAL t_STRING t_STRING block .
+
+    $default  reduce using rule 10 (rda_internal)
+
+
+state 72
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS . t_LBRACE number number number number ident t_RBRACE
+
+    t_LBRACE  shift, and go to state 82
+
+
+state 73
+
+   13 cap_root: t_CAP_ROOT t_STRING t_STRING block .
+
+    $default  reduce using rule 13 (cap_root)
+
+
+state 74
+
+   15 block: t_LBRACE cell_list . t_RBRACE
+
+    t_RBRACE  shift, and go to state 83
+
+
+state 75
+
+   16 block: t_EQUALS t_DATASET .
+
+    $default  reduce using rule 16 (block)
+
+
+state 76
+
+    5 string_cell: t_STRING_CELL t_STRING t_STRING t_EQUALS t_LBRACE . t_STRING t_RBRACE
+
+    t_STRING  shift, and go to state 84
+
+
+state 77
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE . number number number t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 86
+
+
+state 78
+
+    6 long_cell: t_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE . number t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 87
+
+
+state 79
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE . number number number number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 88
+
+
+state 80
+
+    8 boolean_cell: t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS t_LBRACE . t_BOOL t_RBRACE
+
+    t_BOOL  shift, and go to state 89
+
+
+state 81
+
+    9 double_cell: t_DOUBLE_CELL t_STRING t_STRING t_EQUALS t_LBRACE . number t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 90
+
+
+state 82
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE . number number number number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 91
+
+
+state 83
+
+   15 block: t_LBRACE cell_list t_RBRACE .
+
+    $default  reduce using rule 15 (block)
+
+
+state 84
+
+    5 string_cell: t_STRING_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_STRING . t_RBRACE
+
+    t_RBRACE  shift, and go to state 92
+
+
+state 85
+
+   32 number: t_NUMBER .
+
+    $default  reduce using rule 32 (number)
+
+
+state 86
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number . number number t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 93
+
+
+state 87
+
+    6 long_cell: t_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number . t_RBRACE
+
+    t_RBRACE  shift, and go to state 94
+
+
+state 88
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number . number number number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 95
+
+
+state 89
+
+    8 boolean_cell: t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_BOOL . t_RBRACE
+
+    t_RBRACE  shift, and go to state 96
+
+
+state 90
+
+    9 double_cell: t_DOUBLE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number . t_RBRACE
+
+    t_RBRACE  shift, and go to state 97
+
+
+state 91
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number . number number number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 98
+
+
+state 92
+
+    5 string_cell: t_STRING_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_STRING t_RBRACE .
+
+    $default  reduce using rule 5 (string_cell)
+
+
+state 93
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number . number t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 99
+
+
+state 94
+
+    6 long_cell: t_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE .
+
+    $default  reduce using rule 6 (long_cell)
+
+
+state 95
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number . number number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 100
+
+
+state 96
+
+    8 boolean_cell: t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_BOOL t_RBRACE .
+
+    $default  reduce using rule 8 (boolean_cell)
+
+
+state 97
+
+    9 double_cell: t_DOUBLE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE .
+
+    $default  reduce using rule 9 (double_cell)
+
+
+state 98
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number . number number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 101
+
+
+state 99
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number . t_RBRACE
+
+    t_RBRACE  shift, and go to state 102
+
+
+state 100
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number . number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 103
+
+
+state 101
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number . number ident t_RBRACE
+
+    t_NUMBER  shift, and go to state 85
+
+    number  go to state 104
+
+
+state 102
+
+    3 byte_cell: t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number t_RBRACE .
+
+    $default  reduce using rule 3 (byte_cell)
+
+
+state 103
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number number . ident t_RBRACE
+
+    t_IDENT  shift, and go to state 105
+
+    ident  go to state 106
+
+
+state 104
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number . ident t_RBRACE
+
+    t_IDENT  shift, and go to state 105
+
+    ident  go to state 107
+
+
+state 105
+
+   33 ident: t_IDENT .
+
+    $default  reduce using rule 33 (ident)
+
+
+state 106
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident . t_RBRACE
+
+    t_RBRACE  shift, and go to state 108
+
+
+state 107
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident . t_RBRACE
+
+    t_RBRACE  shift, and go to state 109
+
+
+state 108
+
+    7 long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE .
+
+    $default  reduce using rule 7 (long_long_cell)
+
+
+state 109
+
+   12 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE .
+
+    $default  reduce using rule 12 (ccm_time_per_div)
