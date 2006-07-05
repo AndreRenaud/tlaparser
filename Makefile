@@ -5,6 +5,7 @@ FLEX=flex
 
 OBJECTS=tlaparser.o parser.o lexer.o dumpdata.o lists.o scsi.o
 HEADERS=*.h
+GENERATED=parser.c parser.h lexer.c parser.output
 
 default: tlaparser
 
@@ -22,4 +23,4 @@ tlaparser: $(OBJECTS)
 	$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
 
 clean:
-	rm -f $(OBJECTS) tlaparser
+	rm -f $(OBJECTS) tlaparser $(GENERATED)
