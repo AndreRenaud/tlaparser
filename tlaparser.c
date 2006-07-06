@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "dumpdata.h"
@@ -17,6 +18,7 @@ static void usage (char *prog)
 		     "\t-d	    : Dump file contents\n"
 		     "\t-c	    : Compare two files\n"
 		     "\t-s	    : SCSI check\n"
+		     "\t-o options  : List of comma separated options\n"
 	    );
 }
 
@@ -32,6 +34,23 @@ static list_t *load_capture (char *filename)
     return cap;
 }
 
+static char *options = NULL;
+
+int option_set (char *name)
+{
+    char *s = options;
+    int namelen = strlen (name);
+
+    for (s = options; s != NULL; s = strchr (s, ','))
+    {
+	if (strncmp (s, name, namelen) == 0 &&
+  	    strlen (s) >= namelen &&
+	    (s[namelen] == ',' || s[namelen] == '\0'))
+	    return 1;
+    }
+    return 0;
+}
+
 int main (int argc, char *argv[])
 {
     char *file1 = NULL, *file2 = NULL;
@@ -40,7 +59,7 @@ int main (int argc, char *argv[])
 
     while (1)
     {
-	int o = getopt (argc, argv, "1:2:dcs");
+	int o = getopt (argc, argv, "1:2:dcso:");
 	if (o == -1)
 	    break;
 	switch (o)
@@ -50,6 +69,7 @@ int main (int argc, char *argv[])
 	    case 'd': dump = 1; break;
 	    case 'c': compare = 1; break;
 	    case 's': scsi = 1; break;
+	    case 'o': options = optarg; break;
 	    default:
 		usage (argv[0]);
 		return (EXIT_FAILURE);

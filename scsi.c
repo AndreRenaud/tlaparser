@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "dumpdata.h"
+#include "common.h"
 
 //  from pg 45 table 8 of scsi 2 spec, based on msg, c/d, i/o
 static char *scsi_phases[] = { "DATA OUT", "DATA IN", "COMMAND", "STATUS", "*1", "*2", "MESSAGE OUT", "MESSAGE IN"};
@@ -132,12 +133,19 @@ static void decode_scsi_command (unsigned char *buf)
     }
 }
 
+static int get_data (capture *c)
+{
+#warning "Data probe hard coded"
+    return (~flip (c->data[PROBE_e0])) & 0xff;
+}
+
 static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 {
     static int last_cmd = -1;
     static unsigned char buffer[20];
     static int buffer_len = 0;
     static int last_cmd_len = 0;
+    static int current_device = -1;
 
     if (!prev)
 	return;
@@ -146,9 +154,17 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
     if (!capture_bit (prev, "nSEL", channels) &&
 	capture_bit (c, "nSEL", channels))
     {
-	int ch = (~flip (c->data[PROBE_e0])) & 0xff;
-	printf ("\nChanged to device: 0x%2.2x", ch);
+	int ch = get_data (c);
+	if (ch != current_device)
+	    printf ("\nSelected device: 0x%2.2x", ch);
+	current_device = ch;
     }
+
+    if (option_set ("device1") && current_device != 1)
+	return;
+
+    if (option_set ("device2") && current_device != 2)
+	return;
 
     // nbsy is low, and nack goes from low to high
     if (!capture_bit (c, "nBSY", channels) && 
@@ -172,8 +188,7 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 	    last_cmd_len = 0;
 	    printf ("\n%s\n\t", scsi_phases[cmd]);
 	}
-#warning "Data probe hard coded"
-	ch = (~flip (c->data[PROBE_e0])) & 0xff;
+	ch = get_data (c);
 	last_cmd_len++;
 
 	printf ("%2.2x ", ch);
