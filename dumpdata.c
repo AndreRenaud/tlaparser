@@ -41,6 +41,7 @@ int dump_capture (bulk_capture *b)
 
    c = (capture *)(b+1);//(char *)b+sizeof (bulk_capture);
 
+   //printf ("Capture Group: %p\n", b);
    for (i = 0; i < b->length / sizeof (capture); i++)
    {
       dump_single_capture (c, prev);
@@ -61,9 +62,10 @@ void dump_capture_list (list_t *cap, char *name, list_t *channels)
 	printf ("%s->%s\n", c->probe_name, c->name);
     }
 
-    printf ("Capture '%s' %p\n", name, cap);
+    printf ("Capture '%s'\n", name);
     for (n = cap; n != NULL; n = n->next)
     {
+	printf ("Capture item: %p\n", n);
 	dump_capture (n->data);
     }
 }

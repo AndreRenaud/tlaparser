@@ -141,7 +141,15 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 
     if (!prev)
 	return;
-    
+  
+    // nSEL went low -> high, device selection 
+    if (!capture_bit (prev, "nSEL", channels) &&
+	capture_bit (c, "nSEL", channels))
+    {
+	int ch = (~flip (c->data[PROBE_e0])) & 0xff;
+	printf ("\nChanged to device: 0x%2.2x", ch);
+    }
+
     // nbsy is low, and nack goes from low to high
     if (!capture_bit (c, "nBSY", channels) && 
 	capture_bit (c, "nACK", channels) &&
@@ -165,8 +173,7 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 	    printf ("\n%s\n\t", scsi_phases[cmd]);
 	}
 #warning "Data probe hard coded"
-	ch = flip (c->data[PROBE_e0]);
-	ch = (~ch) & 0xff; // invert data lines?
+	ch = (~flip (c->data[PROBE_e0])) & 0xff;
 	last_cmd_len++;
 
 	printf ("%2.2x ", ch);

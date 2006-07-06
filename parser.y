@@ -38,18 +38,18 @@ list_t *list;
 %token t_BINARY_HEADER
 %token t_PREAMBLE
 %token t_COMPOSITE_CELL t_STRING_CELL t_ARRAY_CELL t_BYTE_CELL t_LONG_CELL t_LONG_LONG_CELL 
-%token t_BOOLEAN_CELL t_DOUBLE_CELL t_CHANNEL_CELL
+%token t_BOOLEAN_CELL t_DOUBLE_CELL t_CHANNEL_CELL t_INSTRUMENT_CELL
 %token t_RDA_INTERNAL t_CCM_TIME_PER_DIV
 %token t_CAP_ROOT
 
 %type <string> ident
-%type <list> cblock cell_list block composite_cell array_cell rda_internal cap_root byte_cell string_cell boolean_cell long_cell long_long_cell double_cell channel_cell ccm_time_per_div cell
+%type <list> cblock cell_list block composite_cell array_cell rda_internal cap_root byte_cell string_cell boolean_cell long_cell long_long_cell double_cell channel_cell ccm_time_per_div instrument_cell cell
 
 %%
 
 tlafile: t_PREAMBLE cell_list {datasets = $2};
 
-composite_cell: t_COMPOSITE_CELL t_STRING t_STRING block {$$ = $4;};
+composite_cell: t_COMPOSITE_CELL t_STRING t_STRING block {$$ = NULL;};
 
 byte_cell:  t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number t_RBRACE {$$ = NULL;};
 
@@ -69,23 +69,33 @@ rda_internal: t_RDA_INTERNAL t_STRING t_STRING block {$$ = $4;};
 
 channel_cell: t_CHANNEL_CELL t_STRING t_STRING block {channels = list_prepend (channels, build_channel ($2, $3)); $$ = NULL;};
 
+instrument_cell: t_INSTRUMENT_CELL t_STRING t_STRING block {$$ = $4;};
+
 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE {$$ = NULL;};
 
 cap_root: t_CAP_ROOT t_STRING t_STRING block {$$ = $4;};
 
 cblock: t_C t_STRING t_STRING block
             {
-               //printf ("got block: %s (%s)\n", $1, $2); 
-               if (strcmp ($2, "DaSetNormal") == 0)
-               {
-                  //printf ("Got da set normal: %p\n", $4);
+               printf ("got block: %s (%s, %p)\n", $1, $2, $4); 
+	       $$ = NULL;
+	       if (strcmp ($2, "TbTimebaseSet") == 0)
+		  $$ = $4;
+	       else if (strcmp ($1, "CcmSaveDataCompositeCell") == 0) // contains the cjmtimebasedata
+		  $$ = $4;
+	       else if (strcmp ($1, "CjmTimebaseData") == 0 && strcmp ($2, "TbHiResTimebaseData") != 0) // contains the dasetnormal
+		  $$ = $4;
+	       else if (strcmp ($2, "DaSetNormal") == 0)
                   $$ = $4;
-               }
-               else
-               {
-                  $$ = NULL;
-               }
-               $$ = $4; // override it, this is broken
+#if 0
+	       else if (strcmp ($2, "DataRoot") == 0)
+		  $$ = $4;
+	       else if (strcmp ($2, "PlugInInstance") == 0 || strcmp ($2, "PluginInstance0") == 0)
+		  $$ = $4;
+#endif
+               //$$ = $4; // override it, this is broken
+	       if ($$)
+		    printf ("Using set %s (%s)\n", $1, $2);
             };
 
 block:   t_LBRACE cell_list t_RBRACE {$$ = $2;}
@@ -105,6 +115,7 @@ cell: composite_cell
    | boolean_cell
    | double_cell
    | channel_cell
+   | instrument_cell
    | cap_root
    | cblock
    | rda_internal
