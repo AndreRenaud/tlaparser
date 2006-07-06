@@ -118,15 +118,36 @@ static char *scsi_command_name (int cmd)
     return "Unknown";
 }
 
-static void decode_scsi_command (unsigned char *buf)
+static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_command)
 {
-    int cmd = buf[0];
-    printf ("\n\t%s", scsi_command_name (buf[0]));
-    switch (cmd)
+    switch (phase)
     {
-	case 0x08: // read
-	    printf (" address=0x%2.2x%2.2x len=0x%x", buf[2], buf[3], buf[4]);
+	case 1: // DATA IN
+	{
+	    switch (last_phase_command) // work out what hte last command is, since this is its response data
+	    {
+		case 0x12: // inquiry response data
+		    printf ("\n\tInquiry response data");
+		    break;
+	    }
 	    break;
+	}
+
+	case 2: // COMMAND
+	{
+	    int cmd = buf[0];
+	    printf ("\n\t%s", scsi_command_name (buf[0]));
+	    switch (cmd)
+	    {
+		case 0x08: // read
+		    printf (" address=0x%2.2x%2.2x len=0x%x", buf[2], buf[3], buf[4]);
+		    break;
+
+		default:
+		    break;
+	    }
+	    break;
+	}
 
 	default:
 	    break;
@@ -141,11 +162,13 @@ static int get_data (capture *c)
 
 static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 {
-    static int last_cmd = -1;
+    static int last_phase = -1;
     static unsigned char buffer[20];
     static int buffer_len = 0;
     static int last_cmd_len = 0;
     static int current_device = -1;
+    static uint64_t last_time = 0;
+    static int last_phase_command = -1;
 
     if (!prev)
 	return;
@@ -155,7 +178,7 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 	capture_bit (c, "nSEL", channels))
     {
 	int ch = get_data (c);
-	if (ch != current_device)
+	if (ch != current_device && !option_set ("device1") && !option_set("device2"))
 	    printf ("\nSelected device: 0x%2.2x", ch);
 	current_device = ch;
     }
@@ -166,29 +189,31 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
     if (option_set ("device2") && current_device != 2)
 	return;
 
-    // nbsy is low, and nack goes from low to high
+    // nbsy is low, and nack goes from high to low
     if (!capture_bit (c, "nBSY", channels) && 
-	capture_bit (c, "nACK", channels) &&
-	!capture_bit (prev, "nACK", channels))
+	!capture_bit (c, "nACK", channels) &&
+	capture_bit (prev, "nACK", channels))
     {
-	int cmd = 0;
+	int phase = 0;
 	int ch;
 
-	cmd |= capture_bit (c, "nMSG", channels) << 2;
-	cmd |= capture_bit (c, "nC_D", channels) << 1;
-	cmd |= capture_bit (c, "nIO", channels) << 0;
-	cmd = (~cmd) & 0x7; // invert, since signals are negative logic
+	phase |= capture_bit (c, "nMSG", channels) << 2;
+	phase |= capture_bit (c, "nC_D", channels) << 1;
+	phase |= capture_bit (c, "nIO", channels) << 0;
+	phase = (~phase) & 0x7; // invert, since signals are negative logic
 
-	if (cmd != last_cmd)
+	if (phase != last_phase)
 	{
 	    dump_buffer (buffer, buffer_len, last_cmd_len);
-	    if (last_cmd == 2) // "COMMAND" 
-		decode_scsi_command (buffer);
+	    decode_scsi_command (last_phase, buffer, last_phase_command);
 	    buffer_len = 0;
 	    last_cmd_len = 0;
-	    printf ("\n%s\n\t", scsi_phases[cmd]);
+	    printf ("\n%llu %s\n\t", capture_time (c) - last_time, scsi_phases[phase]);
+	    last_time = capture_time (c);
 	}
 	ch = get_data (c);
+	if (phase == 2 && last_cmd_len == 0) // COMMAND phase, first byte, so record the command
+	    last_phase_command = ch;
 	last_cmd_len++;
 
 	printf ("%2.2x ", ch);
@@ -200,19 +225,18 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 	    buffer_len = 0;
 	    printf ("\n\t");
 	}
-	last_cmd = cmd;
+	last_phase = phase;
     }
    
     // nbsy went high, end of transaction 
     if (capture_bit (c, "nBSY", channels) && !capture_bit (prev, "nBSY", channels))
     {
 	dump_buffer (buffer, buffer_len, last_cmd_len);
-	if (last_cmd == 2) // "COMMAND" 
-	    decode_scsi_command (buffer);
+	decode_scsi_command (last_phase, buffer, last_phase_command);
 	last_cmd_len = 0;
 	buffer_len = 0;
 	printf ("\n-----------");
-	last_cmd = -1;
+	last_phase = -1;
     }
 }
 

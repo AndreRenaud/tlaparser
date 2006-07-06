@@ -18,13 +18,10 @@ static int dump_single_capture (capture *c, capture *prev_cap)
 {
     int i;
 
-    if (prev_cap && (ntohl (c->time_bottom) < ntohl (prev_cap->time_bottom)))
+    if (prev_cap && capture_time (c) < capture_time (prev_cap))
 	printf ("ARGH WE WENT BACKWARDS\n");
-#if 0
-    printf ("%8.8x %8.8x: ", c->time_bottom, c->time_top);
-#else
-    printf ("%8.8x %8.8x: ", ntohl (c->time_bottom), ntohl (c->time_top));
-#endif
+
+    printf ("%llx: ", capture_time (c));
     for (i = 0; i < CAPTURE_DATA_BYTES; i++)
     {
          printf ("%2.2x ", c->data[i]);
@@ -32,6 +29,17 @@ static int dump_single_capture (capture *c, capture *prev_cap)
     printf ("\n");
 
     return 0;
+}
+
+uint64_t capture_time (capture *c)
+{
+    uint64_t t, b;
+    t = ntohl (c->time_top) & 0xffff; // not sure what the story is here, packed data isn't all time stamp
+    //t = 0;
+    b = ntohl (c->time_bottom);
+
+    // timings are in 1/8th of a nano-second, so change it into micro seconds
+    return (t << 32 | b) / 8000; 
 }
 
 int dump_capture (bulk_capture *b)

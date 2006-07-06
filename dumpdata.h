@@ -90,6 +90,8 @@ int capture_bit (capture *c, char *channel_name, list_t *channels);
 // retrieves 1 bit from the capture, from probe 'probe' ( see the PROBE_ structure) index 'index'
 int capture_bit_raw (capture *c, int probe, int index);
 
+uint64_t capture_time (capture *c);
+
 bulk_capture *build_dump (unsigned char *data, int length);
 channel_info *build_channel (char *probe, char *name);
 
