@@ -77,7 +77,7 @@ cap_root: t_CAP_ROOT t_STRING t_STRING block {$$ = $4;};
 
 cblock: t_C t_STRING t_STRING block
             {
-               printf ("got block: %s (%s, %p)\n", $1, $2, $4); 
+               //printf ("got block: %s (%s, %p)\n", $1, $2, $4); 
 	       $$ = NULL;
 	       if (strcmp ($2, "TbTimebaseSet") == 0)
 		  $$ = $4;
@@ -94,8 +94,8 @@ cblock: t_C t_STRING t_STRING block
 		  $$ = $4;
 #endif
                //$$ = $4; // override it, this is broken
-	       if ($$)
-		    printf ("Using set %s (%s)\n", $1, $2);
+	       //if ($$)
+		    //printf ("Using set %s (%s)\n", $1, $2);
             };
 
 block:   t_LBRACE cell_list t_RBRACE {$$ = $2;}
