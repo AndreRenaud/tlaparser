@@ -33,6 +33,12 @@ enum // indices into capture->data[...], to the 8 data bits
     PROBE_e3 = 0,
 };
 
+enum
+{
+    TRANSITION_low_to_high,
+    TRANSITION_high_to_low,
+};
+
 
 #define CAPTURE_DATA_BYTES 18
 
@@ -89,6 +95,9 @@ void dump_capture_list (list_t *capture, char *name, list_t *channels);
 int capture_bit (capture *c, char *channel_name, list_t *channels);
 // retrieves 1 bit from the capture, from probe 'probe' ( see the PROBE_ structure) index 'index'
 int capture_bit_raw (capture *c, int probe, int index);
+
+// returns true/false if a given bit performs a transition between two captures (dir is TRANSITION_...)
+int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *channels, int dir);
 
 uint64_t capture_time (capture *c);
 

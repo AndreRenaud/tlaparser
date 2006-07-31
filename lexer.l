@@ -4,7 +4,7 @@
 #include "parser.h"
 
 #define MAX_STR_CONST 100
-#define MAX_DATA_LEN 50 * 1024 * 1024
+#define MAX_DATA_LEN 100 * 1024 * 1024
 
 char string_buf[MAX_STR_CONST];
 char *string_buf_ptr;

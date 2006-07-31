@@ -5,7 +5,12 @@
 
 #include "dumpdata.h"
 #include "parser.h"
+#ifdef PARSE_SCSI
 #include "scsi.h"
+#endif
+#ifdef PARSE_XD
+#include "xd.h"
+#endif
 
 extern FILE *yyin;
 extern int yyparse (void *YYPARSE_PARAM);
@@ -17,7 +22,12 @@ static void usage (char *prog)
 		     "\t-2 filename : Second file (optional)\n"
 		     "\t-d	    : Dump file contents\n"
 		     "\t-c	    : Compare two files\n"
+#ifdef PARSE_SCSI
 		     "\t-s	    : SCSI check\n"
+#endif
+#ifdef PARSE_XD
+		     "\t-x	    : xD check\n"
+#endif
 		     "\t-o options  : List of comma separated options\n"
 	    );
 }
@@ -54,12 +64,25 @@ int option_set (char *name)
 int main (int argc, char *argv[])
 {
     char *file1 = NULL, *file2 = NULL;
-    int dump = 0, compare = 0, scsi = 0;
+    int dump = 0, compare = 0; 
+#ifdef PARSE_SCSI
+    int scsi = 0;
+#endif
+#ifdef PARSE_XD
+    int xd = 0;
+#endif
     list_t *cap1 = NULL, *cap2 = NULL;
 
     while (1)
     {
-	int o = getopt (argc, argv, "1:2:dcso:");
+	int o = getopt (argc, argv, "1:2:dco:"
+#ifdef PARSE_SCSI
+		"s"
+#endif
+#ifdef PARSE_XD
+		"x"
+#endif
+		);
 	if (o == -1)
 	    break;
 	switch (o)
@@ -68,7 +91,12 @@ int main (int argc, char *argv[])
 	    case '2': file2 = optarg; break;
 	    case 'd': dump = 1; break;
 	    case 'c': compare = 1; break;
+#ifdef PARSE_SCSI
 	    case 's': scsi = 1; break;
+#endif
+#ifdef PARSE_XD
+	    case 'x': xd = 1; break;
+#endif
 	    case 'o': options = optarg; break;
 	    default:
 		usage (argv[0]);
@@ -110,6 +138,7 @@ int main (int argc, char *argv[])
 	    dump_capture_list (cap2, file2, channels);
     }
 
+#ifdef PARSE_SCSI
     if (scsi)
     {
 	if (cap1)
@@ -117,6 +146,15 @@ int main (int argc, char *argv[])
 	if (cap2)
 	    parse_scsi (cap2, file2, channels);
     }
+#endif
+
+#ifdef PARSE_XD
+    if (xd)
+    {
+	if (cap1)
+	    parse_xd (cap1, file1, channels);
+    }
+#endif
 
     return 0;
 }

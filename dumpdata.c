@@ -90,7 +90,7 @@ int capture_bit (capture *cap, char *channel_name, list_t *channels)
     for (n = channels; n!= NULL; n = n->next)
     {
 	channel_info *c = n->data;
-	if (strcmp (c->name, channel_name) == 0)
+	if (strcasecmp (c->name, channel_name) == 0)
 	{
 	    char *probes={"EADC"};
 	    int i;
@@ -126,6 +126,25 @@ int capture_bit (capture *cap, char *channel_name, list_t *channels)
 
     printf ("Unknown channel: %s\n", channel_name);
     return -1;
+}
+
+int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *channels, int dir)
+{
+    int n, p;
+
+    p = capture_bit (prev, name, channels);
+    if (p < 0)
+	return -1;
+    n = capture_bit (cur, name, channels);
+    if (n < 0)
+	return -1;
+
+    if (n && !p && dir == TRANSITION_low_to_high)
+	return 1;
+    if (!n && p && dir == TRANSITION_high_to_low)
+	return 1;
+
+    return 0;
 }
 
 channel_info *build_channel (char *probe, char *name)

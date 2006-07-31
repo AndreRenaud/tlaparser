@@ -3,9 +3,15 @@ LDFLAGS=
 BISON=bison
 FLEX=flex
 
-OBJECTS=tlaparser.o parser.o lexer.o dumpdata.o lists.o scsi.o
+OBJECTS=tlaparser.o parser.o lexer.o dumpdata.o lists.o
 HEADERS=*.h
 GENERATED=parser.c parser.h lexer.c parser.output
+
+CFLAGS+=-DPARSE_SCSI
+OBJECTS+=scsi.o
+
+CFLAGS+=-DPARSE_XD
+OBJECTS+=xd.o
 
 default: tlaparser
 
