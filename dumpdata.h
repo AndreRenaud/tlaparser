@@ -7,6 +7,7 @@
 
 #define MAX_DATA_TRANSFER (8 * 1024)
 
+#if 0
 enum // indices into capture->data[...], to the 8 data bits
 {
     PROBE_clk1 = 17,
@@ -32,6 +33,7 @@ enum // indices into capture->data[...], to the 8 data bits
     PROBE_e2 = 1,
     PROBE_e3 = 0,
 };
+#endif
 
 enum
 {
@@ -89,6 +91,7 @@ typedef struct
 
 int dump_capture (bulk_capture *c);
 void dump_capture_list (list_t *capture, char *name, list_t *channels);
+void dump_channel_list (list_t *channels);
 
 // returns 0, or 1 depending on whether the bit from the capture corresponding to 
 // 'channel_name' (from the channels list) was set
@@ -98,6 +101,7 @@ int capture_bit_raw (capture *c, int probe, int index);
 
 // returns true/false if a given bit performs a transition between two captures (dir is TRANSITION_...)
 int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *channels, int dir);
+
 
 uint64_t capture_time (capture *c);
 

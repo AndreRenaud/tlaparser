@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <assert.h>
 
 #include "dumpdata.h"
 
@@ -60,17 +61,23 @@ int dump_capture (bulk_capture *b)
    return 0;
 }
 
-void dump_capture_list (list_t *cap, char *name, list_t *channels)
+void dump_channel_list (list_t *channels)
 {
     list_t *n;
-
     for (n = channels; n!= NULL; n = n->next)
     {
 	channel_info *c = n->data;
 	printf ("%s->%s\n", c->probe_name, c->name);
     }
+}
+
+void dump_capture_list (list_t *cap, char *name, list_t *channels)
+{
+    list_t *n;
 
     printf ("Capture '%s'\n", name);
+    dump_channel_list (channels);
+
     for (n = cap; n != NULL; n = n->next)
     {
 	printf ("Capture item: %p\n", n);
@@ -80,6 +87,11 @@ void dump_capture_list (list_t *cap, char *name, list_t *channels)
 
 int capture_bit_raw (capture *cap, int probe, int index)
 {
+    if (probe < 0 || probe >= CAPTURE_DATA_BYTES || index < 0 || index >= 8)
+    {
+	printf ("Invalid probe: %d index: %d", probe, index);
+	assert (0);
+    }
     return (cap->data[probe] & (1 << index)) ? 1 : 0;
 }
 
@@ -96,6 +108,7 @@ int capture_bit (capture *cap, char *channel_name, list_t *channels)
 	    int i;
 	    int probe = -1;
 	    int index;
+	    int retval;
 
 	    if (strlen (c->probe_name) != 4 || c->probe_name[2] != '_')
 	    {
@@ -117,14 +130,21 @@ int capture_bit (capture *cap, char *channel_name, list_t *channels)
 
 	    probe += (3 - (c->probe_name[1] - '0'));
 
-	    //printf ("Probe %s = %d, index=%d, channel=%s\n", c->probe_name, probe, index, channel_name);
+#warning "Weird probe bump due to xD tla oddity - not sure why"
+	    probe += 2;
+	    retval = capture_bit_raw (cap, probe, index);
+#if 0
+	    printf ("Probe %s = %d, index=%d, channel=%s val=%d\n", 
+		    c->probe_name, probe, index, c->name, retval);
+#endif
 
-	    return capture_bit_raw (cap, probe, index);
+	    return retval;
 	    //return (cap->data[probe] & (1 << index)) ? 1 : 0;
 	}
     }
 
     printf ("Unknown channel: %s\n", channel_name);
+    assert (0);
     return -1;
 }
 

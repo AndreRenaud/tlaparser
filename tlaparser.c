@@ -21,6 +21,7 @@ static void usage (char *prog)
     fprintf (stderr, "\t-1 filename : First file\n"
 		     "\t-2 filename : Second file (optional)\n"
 		     "\t-d	    : Dump file contents\n"
+		     "\t-l	    : Dump channel names\n"
 		     "\t-c	    : Compare two files\n"
 #ifdef PARSE_SCSI
 		     "\t-s	    : SCSI check\n"
@@ -64,7 +65,7 @@ int option_set (char *name)
 int main (int argc, char *argv[])
 {
     char *file1 = NULL, *file2 = NULL;
-    int dump = 0, compare = 0; 
+    int dump = 0, compare = 0, list_channels = 0;
 #ifdef PARSE_SCSI
     int scsi = 0;
 #endif
@@ -75,7 +76,7 @@ int main (int argc, char *argv[])
 
     while (1)
     {
-	int o = getopt (argc, argv, "1:2:dco:"
+	int o = getopt (argc, argv, "1:2:dlco:"
 #ifdef PARSE_SCSI
 		"s"
 #endif
@@ -90,6 +91,7 @@ int main (int argc, char *argv[])
 	    case '1': file1 = optarg; break;
 	    case '2': file2 = optarg; break;
 	    case 'd': dump = 1; break;
+	    case 'l': list_channels = 1; break;
 	    case 'c': compare = 1; break;
 #ifdef PARSE_SCSI
 	    case 's': scsi = 1; break;
@@ -129,6 +131,9 @@ int main (int argc, char *argv[])
 	compare_streams (s1, s2);
     }
 #endif
+
+    if (list_channels)
+	dump_channel_list (channels);
 
     if (dump)
     {

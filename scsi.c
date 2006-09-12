@@ -156,8 +156,8 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 
 static int get_data (capture *c)
 {
-#warning "Data probe hard coded"
-    return (~flip (c->data[PROBE_e0])) & 0xff;
+#warning "Data probe hard coded to e0"
+    return (~flip (c->data[3])) & 0xff;
 }
 
 static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
