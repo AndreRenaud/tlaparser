@@ -41,15 +41,13 @@ struct pin_assignments
 
 static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 {
-    struct pin_assignments pa = {-1};
+    static struct pin_assignments pa = {-1};
 
     if (pa.init == -1 && c)
     {
 	pa.init = 1;
 	capture_channel_details (c, "igo", &pa.igo_probe, &pa.igo_index);
 	capture_channel_details (c, "irew", &pa.irew_probe, &pa.irew_index);
-
-	
     }
 
     if (!prev) // skip first sample
