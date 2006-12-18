@@ -13,6 +13,9 @@ OBJECTS+=scsi.o
 CFLAGS+=-DPARSE_XD
 OBJECTS+=xd.o
 
+CFLAGS+=-DPARSE_PERTEC
+OBJECTS+=pertec.o
+
 default: tlaparser
 
 tlaparser.c: parser.c

@@ -6,6 +6,7 @@
 #include "lists.h"
 
 #define MAX_DATA_TRANSFER (8 * 1024)
+#define MAX_DATA_LEN (100 * 1024 * 1024)
 
 #if 0
 enum // indices into capture->data[...], to the 8 data bits
@@ -93,6 +94,10 @@ int dump_capture (bulk_capture *c);
 void dump_capture_list (list_t *capture, char *name, list_t *channels);
 void dump_channel_list (list_t *channels);
 
+/* Puts the probe & index details in *probeb & *indexp for a given channel name
+ * Useful to speed things up so we don't continually do the same searches
+ */
+int capture_channel_details (capture *cap, char *channel_name, int *probep, int *indexp);
 // returns 0, or 1 depending on whether the bit from the capture corresponding to 
 // 'channel_name' (from the channels list) was set
 int capture_bit (capture *c, char *channel_name, list_t *channels);

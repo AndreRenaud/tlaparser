@@ -95,7 +95,7 @@ int capture_bit_raw (capture *cap, int probe, int index)
     return (cap->data[probe] & (1 << index)) ? 1 : 0;
 }
 
-int capture_bit (capture *cap, char *channel_name, list_t *channels)
+int capture_channel_details (capture *cap, char *channel_name, int *probep, int *indexp)
 {
     list_t *n;
 
@@ -108,7 +108,6 @@ int capture_bit (capture *cap, char *channel_name, list_t *channels)
 	    int i;
 	    int probe = -1;
 	    int index;
-	    int retval;
 
 	    if (strlen (c->probe_name) != 4 || c->probe_name[2] != '_')
 	    {
@@ -132,19 +131,25 @@ int capture_bit (capture *cap, char *channel_name, list_t *channels)
 
 #warning "Weird probe bump due to xD tla oddity - not sure why"
 	    probe += 2;
-	    retval = capture_bit_raw (cap, probe, index);
-#if 0
-	    printf ("Probe %s = %d, index=%d, channel=%s val=%d\n", 
-		    c->probe_name, probe, index, c->name, retval);
-#endif
 
-	    return retval;
-	    //return (cap->data[probe] & (1 << index)) ? 1 : 0;
+	    *probep = probe;
+	    *indexp = index;
+
+	    return 0;
 	}
     }
 
     printf ("Unknown channel: %s\n", channel_name);
-    assert (0);
+    return -1;
+}
+
+int capture_bit (capture *cap, char *channel_name, list_t *channels)
+{
+    int probe;
+    int index;
+
+    if (capture_channel_details (cap, channel_name, &probe, &index) == 0)
+	return capture_bit_raw (cap, probe, index);
     return -1;
 }
 

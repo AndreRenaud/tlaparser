@@ -11,6 +11,9 @@
 #ifdef PARSE_XD
 #include "xd.h"
 #endif
+#ifdef PARSE_PERTEC
+#include "pertec.h"
+#endif
 
 extern FILE *yyin;
 extern int yyparse (void *YYPARSE_PARAM);
@@ -29,6 +32,9 @@ static void usage (char *prog)
 #ifdef PARSE_XD
 		     "\t-x	    : xD check\n"
 #endif
+#ifdef PARSE_PERTEC
+		     "\t-p	    : pertec check\n"
+#endif
 		     "\t-o options  : List of comma separated options\n"
 	    );
 }
@@ -36,8 +42,19 @@ static void usage (char *prog)
 static list_t *load_capture (char *filename)
 {
     list_t *cap;
+    off_t len;
 
     yyin = fopen (filename, "r");
+    fseeko (yyin, 0, SEEK_END);
+    len = ftello (yyin);
+    fseeko (yyin, 0, SEEK_SET);
+    if (len >= MAX_DATA_LEN)
+    {
+	fclose (yyin);
+	fprintf (stderr, "File too large: %s - increase MAX_DATA_LEN\n", filename);
+	return NULL;
+    }
+
     yyparse (NULL);
     cap = datasets;
     fclose (yyin);
@@ -72,6 +89,9 @@ int main (int argc, char *argv[])
 #ifdef PARSE_XD
     int xd = 0;
 #endif
+#ifdef PARSE_PERTEC
+    int pertec = 0;
+#endif
     list_t *cap1 = NULL, *cap2 = NULL;
 
     while (1)
@@ -83,6 +103,9 @@ int main (int argc, char *argv[])
 #ifdef PARSE_XD
 		"x"
 #endif
+#ifdef PARSE_PERTEC
+		"p"
+#endif
 		);
 	if (o == -1)
 	    break;
@@ -93,6 +116,9 @@ int main (int argc, char *argv[])
 	    case 'd': dump = 1; break;
 	    case 'l': list_channels = 1; break;
 	    case 'c': compare = 1; break;
+#ifdef PARSE_PERTEC
+	    case 'p': pertec = 1; break;
+#endif
 #ifdef PARSE_SCSI
 	    case 's': scsi = 1; break;
 #endif
@@ -101,6 +127,7 @@ int main (int argc, char *argv[])
 #endif
 	    case 'o': options = optarg; break;
 	    default:
+		fprintf (stderr, "Unknown option: %d (%c)\n", o, o);
 		usage (argv[0]);
 		return (EXIT_FAILURE);
 	}
@@ -159,6 +186,12 @@ int main (int argc, char *argv[])
 	if (cap1)
 	    parse_xd (cap1, file1, channels);
     }
+#endif
+
+#ifdef PARSE_PERTEC
+    if (pertec)
+	if (cap1)
+	    parse_pertec (cap1, file1, channels);
 #endif
 
     return 0;

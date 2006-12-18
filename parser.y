@@ -9,10 +9,12 @@
 extern char *yytext;
 extern int yychar;
 extern int line_number;
+extern FILE *yyin;
 
 int yyerror (char *error)
 {
-    printf ("yyerror: line %d\ntoken: %s: %s\nexpecting: %d\n", line_number, yytext, error, yychar);
+    printf ("yyerror: line %d\ntoken: %s: %s\nexpecting: %d\npos: %ld\n", 
+	    line_number, yytext, error, yychar, ftell (yyin));
     return 0;
 }
 
