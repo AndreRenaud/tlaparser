@@ -29,20 +29,40 @@ static const char *pertec_command_name (int cmd)
 	default:   return "unknown";
     }
 }
+struct pin_assignments
+{
+    int init;
+    int igo_probe;
+    int igo_index;
+
+    int irew_probe;
+    int irew_index;
+};
 
 static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 {
+    struct pin_assignments pa = {-1};
+
+    if (pa.init == -1 && c)
+    {
+	pa.init = 1;
+	capture_channel_details (c, "igo", &pa.igo_probe, &pa.igo_index);
+	capture_channel_details (c, "irew", &pa.irew_probe, &pa.irew_index);
+
+	
+    }
+
     if (!prev) // skip first sample
 	return;
 
-    if (!capture_bit (prev, "igo", channels) && 
-	capture_bit (c, "igo", channels))
+    if (!capture_bit_raw (prev, pa.igo_probe, pa.igo_index) && 
+	capture_bit_raw (c, pa.igo_probe, pa.igo_index))
     {
 	int cmd = decode_pertec_command (c, channels);
 	printf ("igo: %x %s\n", cmd, pertec_command_name (cmd));
     }
-    if (!capture_bit (prev, "irew", channels) &&
-	capture_bit (c, "irew", channels))
+    if (!capture_bit_raw (prev, pa.irew_probe, pa.irew_index) && 
+	capture_bit_raw (c, pa.irew_probe, pa.irew_index))
     {
 	printf ("rewind\n");
     }

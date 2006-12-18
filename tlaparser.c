@@ -43,6 +43,8 @@ static list_t *load_capture (char *filename)
 {
     list_t *cap;
     off_t len;
+    
+    printf ("About to load %s\n", filename);
 
     yyin = fopen (filename, "r");
     fseeko (yyin, 0, SEEK_END);
