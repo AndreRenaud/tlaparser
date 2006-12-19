@@ -85,17 +85,17 @@ void dump_capture_list (list_t *cap, char *name, list_t *channels)
     }
 }
 
-int capture_bit_raw (capture *cap, int probe, int index)
+int capture_bit (capture *cap, pin_info_t pin)
 {
-    if (probe < 0 || probe >= CAPTURE_DATA_BYTES || index < 0 || index >= 8)
+    if (pin.probe < 0 || pin.probe >= CAPTURE_DATA_BYTES || pin.index < 0 || pin.index >= 8)
     {
-	printf ("Invalid probe: %d index: %d", probe, index);
+	printf ("Invalid probe: %d index: %d", pin.probe, pin.index);
 	assert (0);
     }
-    return (cap->data[probe] & (1 << index)) ? 1 : 0;
+    return (cap->data[pin.probe] & (1 << pin.index)) ? 1 : 0;
 }
 
-int capture_channel_details (capture *cap, char *channel_name, int *probep, int *indexp)
+int capture_channel_details (capture *cap, char *channel_name, pin_info_t *pinp)
 {
     list_t *n;
 
@@ -132,8 +132,8 @@ int capture_channel_details (capture *cap, char *channel_name, int *probep, int 
 #warning "Weird probe bump due to xD tla oddity - not sure why"
 	    probe += 2;
 
-	    *probep = probe;
-	    *indexp = index;
+	    pinp->probe = probe;
+	    pinp->index = index;
 
 	    return 0;
 	}
@@ -143,13 +143,12 @@ int capture_channel_details (capture *cap, char *channel_name, int *probep, int 
     return -1;
 }
 
-int capture_bit (capture *cap, char *channel_name, list_t *channels)
+int capture_bit_name (capture *cap, char *channel_name, list_t *channels)
 {
-    int probe;
-    int index;
+    pin_info_t p;
 
-    if (capture_channel_details (cap, channel_name, &probe, &index) == 0)
-	return capture_bit_raw (cap, probe, index);
+    if (capture_channel_details (cap, channel_name, &p) == 0)
+	return capture_bit (cap, p);
     return -1;
 }
 
@@ -157,10 +156,10 @@ int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *cha
 {
     int n, p;
 
-    p = capture_bit (prev, name, channels);
+    p = capture_bit_name (prev, name, channels);
     if (p < 0)
 	return -1;
-    n = capture_bit (cur, name, channels);
+    n = capture_bit_name (cur, name, channels);
     if (n < 0)
 	return -1;
 

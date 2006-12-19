@@ -13,14 +13,14 @@ static uint8_t printable_char (int data)
 static uint8_t xd_data (capture *c, list_t *channels)
 {
     uint8_t retval = 0;
-    retval |= (capture_bit (c, "d0", channels) ? 1 : 0) << 0;
-    retval |= (capture_bit (c, "d1", channels) ? 1 : 0) << 1;
-    retval |= (capture_bit (c, "d2", channels) ? 1 : 0) << 2;
-    retval |= (capture_bit (c, "d3", channels) ? 1 : 0) << 3;
-    retval |= (capture_bit (c, "d4", channels) ? 1 : 0) << 4;
-    retval |= (capture_bit (c, "d5", channels) ? 1 : 0) << 5;
-    retval |= (capture_bit (c, "d6", channels) ? 1 : 0) << 6;
-    retval |= (capture_bit (c, "d7", channels) ? 1 : 0) << 7;
+    retval |= (capture_bit_name (c, "d0", channels) ? 1 : 0) << 0;
+    retval |= (capture_bit_name (c, "d1", channels) ? 1 : 0) << 1;
+    retval |= (capture_bit_name (c, "d2", channels) ? 1 : 0) << 2;
+    retval |= (capture_bit_name (c, "d3", channels) ? 1 : 0) << 3;
+    retval |= (capture_bit_name (c, "d4", channels) ? 1 : 0) << 4;
+    retval |= (capture_bit_name (c, "d5", channels) ? 1 : 0) << 5;
+    retval |= (capture_bit_name (c, "d6", channels) ? 1 : 0) << 6;
+    retval |= (capture_bit_name (c, "d7", channels) ? 1 : 0) << 7;
 
     //printf ("data: 0x%x\n", retval);
     return retval;
@@ -91,15 +91,15 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
     if (!prev) // need it to detect edges
 	return;
 
-    if (!capture_bit (c, "nce", channels)) // we're accessing xD
+    if (!capture_bit_name (c, "nce", channels)) // we're accessing xD
     {
 #if 0
 	printf ("nce: %d %d %d\n", 
-		capture_bit (c, "ale", channels),
-		capture_bit (c, "cle", channels),
-		capture_bit (c, "nwe", channels));
+		capture_bit_name (c, "ale", channels),
+		capture_bit_name (c, "cle", channels),
+		capture_bit_name (c, "nwe", channels));
 #endif
-	if (capture_bit (c, "ale", channels))
+	if (capture_bit_name (c, "ale", channels))
 	{
 	    //printf ("into ale mode\n");
 	    ale_mode = 1;
@@ -110,7 +110,7 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 	    cur_data = cur_data_len = ale_mode = 0;
 	}
 
-	if (capture_bit (c, "cle", channels))
+	if (capture_bit_name (c, "cle", channels))
 	{
 	    //printf ("into cle mode\n");
 	    cle_mode = 1;

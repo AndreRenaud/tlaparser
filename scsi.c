@@ -174,8 +174,8 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 	return;
   
     // nSEL went low -> high, device selection 
-    if (!capture_bit (prev, "nSEL", channels) &&
-	capture_bit (c, "nSEL", channels))
+    if (!capture_bit_name (prev, "nSEL", channels) &&
+	capture_bit_name (c, "nSEL", channels))
     {
 	int ch = get_data (c);
 	if (ch != current_device && !option_set ("device1") && !option_set("device2"))
@@ -190,16 +190,16 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 	return;
 
     // nbsy is low, and nack goes from high to low
-    if (!capture_bit (c, "nBSY", channels) && 
-	!capture_bit (c, "nACK", channels) &&
-	capture_bit (prev, "nACK", channels))
+    if (!capture_bit_name (c, "nBSY", channels) && 
+	!capture_bit_name (c, "nACK", channels) &&
+	capture_bit_name (prev, "nACK", channels))
     {
 	int phase = 0;
 	int ch;
 
-	phase |= capture_bit (c, "nMSG", channels) << 2;
-	phase |= capture_bit (c, "nC_D", channels) << 1;
-	phase |= capture_bit (c, "nIO", channels) << 0;
+	phase |= capture_bit_name (c, "nMSG", channels) << 2;
+	phase |= capture_bit_name (c, "nC_D", channels) << 1;
+	phase |= capture_bit_name (c, "nIO", channels) << 0;
 	phase = (~phase) & 0x7; // invert, since signals are negative logic
 
 	if (phase != last_phase)
@@ -229,7 +229,7 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
     }
    
     // nbsy went high, end of transaction 
-    if (capture_bit (c, "nBSY", channels) && !capture_bit (prev, "nBSY", channels))
+    if (capture_bit_name (c, "nBSY", channels) && !capture_bit_name (prev, "nBSY", channels))
     {
 	dump_buffer (buffer, buffer_len, last_cmd_len);
 	decode_scsi_command (last_phase, buffer, last_phase_command);

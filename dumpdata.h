@@ -90,19 +90,25 @@ typedef struct
 
 } stream_info_t;
 
+typedef struct
+{
+    int probe;
+    int index;
+} pin_info_t;
+
 int dump_capture (bulk_capture *c);
 void dump_capture_list (list_t *capture, char *name, list_t *channels);
 void dump_channel_list (list_t *channels);
 
-/* Puts the probe & index details in *probeb & *indexp for a given channel name
+/* Puts the pin details for channel_name into pinp
  * Useful to speed things up so we don't continually do the same searches
  */
-int capture_channel_details (capture *cap, char *channel_name, int *probep, int *indexp);
+int capture_channel_details (capture *cap, char *channel_name, pin_info_t *pinp);
 // returns 0, or 1 depending on whether the bit from the capture corresponding to 
 // 'channel_name' (from the channels list) was set
-int capture_bit (capture *c, char *channel_name, list_t *channels);
+int capture_bit_name (capture *c, char *channel_name, list_t *channels);
 // retrieves 1 bit from the capture, from probe 'probe' ( see the PROBE_ structure) index 'index'
-int capture_bit_raw (capture *c, int probe, int index);
+int capture_bit (capture *c, pin_info_t pin);
 
 // returns true/false if a given bit performs a transition between two captures (dir is TRANSITION_...)
 int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *channels, int dir);
