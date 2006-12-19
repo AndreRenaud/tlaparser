@@ -59,6 +59,11 @@ C(l|w|j|s|n|net|c)m[a-zA-Z0-9]+    {yylval.string = strdup (yytext); return t_C;
                   BEGIN(dataset); 
                   datasetpos = 0; 
 		  datasetlen = atoi (&yytext[2]);
+		  if (datasetlen >= MAX_DATA_LEN)
+		  {
+		      printf ("datasetlen too large %d > %d\n", datasetlen, MAX_DATA_LEN);
+		      abort ();
+		  }
                   //printf ("Dataset of length: %d\n", datasetlen);
                }
 

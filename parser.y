@@ -19,6 +19,9 @@ int yyerror (char *error)
 }
 
 int yylex ();
+
+list_t *final_capture = NULL;
+list_t *final_channels = NULL;
 %}
 
 %union{
@@ -35,7 +38,7 @@ list_t *list;
 
 %token <string> t_STRING t_IDENT t_C
 %token <data> t_DATASET
-%token t_NUMBER t_BOOL
+%token <integer> t_BOOL t_NUMBER
 %token t_LBRACE t_RBRACE t_EQUALS t_MINUS t_PLUS t_DOT
 %token t_BINARY_HEADER
 %token t_PREAMBLE
@@ -46,34 +49,38 @@ list_t *list;
 
 %type <string> ident
 %type <list> cblock cell_list block composite_cell array_cell rda_internal cap_root byte_cell string_cell boolean_cell long_cell long_long_cell double_cell channel_cell ccm_time_per_div instrument_cell cell
+%type <integer> channel_contents
 
 %%
 
-tlafile: t_PREAMBLE cell_list {datasets = $2};
+tlafile: t_PREAMBLE cell_list {final_capture = $2}
 
-composite_cell: t_COMPOSITE_CELL t_STRING t_STRING block {$$ = NULL;};
+composite_cell: t_COMPOSITE_CELL t_STRING t_STRING block {$$ = NULL;}
 
-byte_cell:  t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number t_RBRACE {$$ = NULL;};
+byte_cell:  t_BYTE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number t_RBRACE {$$ = NULL;}
 
-array_cell: t_ARRAY_CELL t_STRING t_STRING block {$$ = $4;};
+array_cell: t_ARRAY_CELL t_STRING t_STRING block {$$ = $4;}
 
-string_cell: t_STRING_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_STRING t_RBRACE {$$ = NULL;};
+string_cell: t_STRING_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_STRING t_RBRACE {$$ = NULL;}
 
-long_cell: t_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE {$$ = NULL;};
+long_cell: t_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE {$$ = NULL;}
 
-long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE {$$= NULL;};
+long_long_cell: t_LONG_LONG_CELL t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE {$$= NULL;}
 
-boolean_cell:  t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_BOOL t_RBRACE {$$ = NULL;};
+boolean_cell:  t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS t_LBRACE t_BOOL t_RBRACE {$$ = NULL;}
 
-double_cell: t_DOUBLE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE {$$ = NULL;};
+double_cell: t_DOUBLE_CELL t_STRING t_STRING t_EQUALS t_LBRACE number t_RBRACE {$$ = NULL;}
 
-rda_internal: t_RDA_INTERNAL t_STRING t_STRING block {$$ = $4;};
+rda_internal: t_RDA_INTERNAL t_STRING t_STRING block {$$ = $4;}
 
-channel_cell: t_CHANNEL_CELL t_STRING t_STRING block {channels = list_prepend (channels, build_channel ($2, $3)); $$ = NULL;};
+channel_cell: t_CHANNEL_CELL t_STRING t_STRING channel_contents {final_channels = list_prepend (final_channels, build_channel ($2, $3, $4)); $$ = NULL;}
 
-instrument_cell: t_INSTRUMENT_CELL t_STRING t_STRING block {$$ = $4;};
+channel_contents: t_LBRACE t_RBRACE		{$$ = 0;}
+	       | t_LBRACE t_BOOLEAN_CELL t_STRING t_STRING t_EQUALS  t_LBRACE t_BOOL t_RBRACE t_RBRACE {$$ = $7;}
 
-ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE {$$ = NULL;};
+instrument_cell: t_INSTRUMENT_CELL t_STRING t_STRING block {$$ = $4;}
+
+ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE {$$ = NULL;}
 
 cap_root: t_CAP_ROOT t_STRING t_STRING block {$$ = $4;};
 
@@ -128,4 +135,3 @@ number: t_NUMBER;
 
 ident:   t_IDENT;
 %%
-

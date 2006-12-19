@@ -8,9 +8,6 @@
 
 #include "dumpdata.h"
 
-list_t *datasets = NULL;
-list_t *channels = NULL;
-
 #define bit(d,b) ((d & (1 << b)) ? 1 : 0)
 #define falling_edge(b) (bit(diff, b) && !bit(val, b))
 #define rising_edge(b) (bit(diff, b) && bit(val, b))
@@ -87,16 +84,20 @@ void dump_capture_list (list_t *cap, char *name, list_t *channels)
 
 int capture_bit (capture *cap, channel_info *c)
 {
-    if (c->probe < 0 || c->probe >= CAPTURE_DATA_BYTES || c->index < 0 || c->index >= 8)
+    int retval;
+    if (!c || c->probe < 0 || c->probe >= CAPTURE_DATA_BYTES || c->index < 0 || c->index >= 8)
     {
-	printf ("Invalid probe: %d index: %d", c->probe, c->index);
-	assert (0);
+	printf ("Invalid probe: %d index: %d\n", 
+		c ? c->probe : -1 , c ? c->index : -1);
+	abort ();
     }
-#warning "Possibly should be working out if the pin has been tagged as 'inverted' here, and doing the same"
-    return (cap->data[c->probe] & (1 << c->index)) ? 1 : 0;
+    retval = (cap->data[c->probe] & (1 << c->index));
+    if (c->inverted)
+	retval = !retval;
+    return retval ? 1 : 0;
 }
 
-channel_info *capture_channel_details (capture *cap, char *channel_name)
+channel_info *capture_channel_details (capture *cap, char *channel_name, list_t *channels)
 {
     list_t *n;
 
@@ -117,7 +118,7 @@ int capture_bit_name (capture *cap, char *channel_name, list_t *channels)
 {
     channel_info *chan;
 
-    chan = capture_channel_details (cap, channel_name);
+    chan = capture_channel_details (cap, channel_name, channels);
     if (chan)
 	return capture_bit (cap, chan);
     return -1;
@@ -149,16 +150,17 @@ int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *cha
  * for 3 & 1, checking that we haven't skipped a probe
  * This is all vaguely confusing
  */
-channel_info *build_channel (char *probe_name, char *name)
+channel_info *build_channel (char *probe_name, char *name, int inverted)
 {
     channel_info *retval;
     static int probe = -1; // so that we ++ to 0
     static char last_probe[10] = "\0";
-#warning "Should cope with 'ClaChannelInversion' option in tla file to know if a channel is inverted, and then invert automatically in capture_bit"
 
     retval = malloc (sizeof (channel_info));
     strncpy (retval->probe_name, probe_name, 20);
     retval->probe_name[19] = '\0';
+
+    retval->inverted = inverted;
 
     // they seem to have leading & trailing $ signs on them, so chop them off if they're there
     if (name[0] == '$' && name[strlen(name) - 1] == '$')
@@ -184,8 +186,8 @@ channel_info *build_channel (char *probe_name, char *name)
     retval->index = atoi (&probe_name[3]);
 
 #if 0
-    printf ("Added channel %s %s - (%d, %d)\n",
-	    retval->probe_name, retval->name, retval->probe, retval->index);
+    printf ("Added channel %s %s - (%d, %d) %s\n",
+	    retval->probe_name, retval->name, retval->probe, retval->index, retval->inverted ? "Inverted" : "");
 #endif
 
     return retval;
@@ -195,284 +197,18 @@ bulk_capture *build_dump (unsigned char *data, int length)
 {
    bulk_capture *retval;
 
-   //printf ("build_dump: %p, %d\n", data, length);   
-
-   retval = malloc (length + sizeof (bulk_capture));
+   retval = malloc (sizeof (bulk_capture));
+   retval->data = malloc (length);
 
    //data += sizeof (capture * 16); // skip the header crap
 
-   memcpy ((char *)retval + sizeof (bulk_capture), data, length);
+   memcpy (retval->data, data, length);
 
    retval->length = length;
+
+   printf ("build_dump: %p, %d -> %p, %d\n", data, length, retval->data, retval->length);
 
    return retval;
 }
 
-#if 0 // this stuff is all specific to Pertec - removed for now
-static void compare_dump (bulk_capture *b1, bulk_capture *b2, char *file1, char *file2)
-{
-   printf ("file: %s\n", file2);
-   dump_capture (b2);
-   printf ("file: %s\n", file1);
-   dump_capture (b1);
-}
 
-int capture_compare (list_t *data1, list_t *data2, char *file1, char *file2)
-{
-   int i;
-   int done = 0;
-
-   data1 = data1->next; // skip first
-   data2 = data2->next; //  and again
-
-   i = 0;
-   while (!done)
-   {
-      compare_dump (data1->data, data2->data, file1, file2);
-      data1 = data1->next;
-      data2 = data2->next;
-      if (!data1 || !data2)
-         done = 1;
-   }
-
-#if 0
-   list_t *n;
-   bulk_capture *b;
-
-   printf ("dataset 1\n");
-   for (n = data1, i = 0; n != NULL; n = n->next, i++)
-   {
-      b = n->data;
-      printf ("capture: %d, length: %d\n", i, b->length);
-      //dump_capture (b);
-   }
-
-   printf ("dataset 2\n");
-   for (n = data2, i = 0; n != NULL; n = n->next, i++)
-   {
-      b = n->data;
-      printf ("capture: %d, length: %d\n", i, b->length);
-      //dump_capture (b);
-   }
-#endif
-   return 0;
-}
-
-static uint32_t load_val (capture *c)
-{
-   return (~(c->data[SCOPE_d0]) & 0xff) | (c->data[SCOPE_e0] << 8) | (c->data[SCOPE_d1] << 16);
-}
-
-stream_info_t *build_stream_info (list_t *data, char *filename)
-{
-   stream_info_t *s;
-
-   s = malloc (sizeof (stream_info_t));
-   s->data = data->next; // skip the first bogus record
-   s->current = s->data->data;
-   s->current_cap = (capture *)(s->current+1);//(char *)(s->current) + sizeof (bulk_capture);
-   strncpy (s->filename, filename, 99);
-   s->filename[99] = '\0';
-   
-   s->prev = -1;
-   s->val = load_val (s->current_cap);
-   s->byte = s->val & 0xff;
-   s->diff = 0;
-   s->command_count = 0;
-   s->data_count = 0;
-
-   s->finished = 0;
-
-   return s;
-}
-
-void stream_next (stream_info_t *s)
-{
-   uint32_t val = s->val;
-   capture *last = (capture *)((char *)(s->data->data + 1) + (s->current->length));
-   s->current_cap++;
-   if (s->current_cap >= last)
-   {
-      printf ("finished one record\n");
-      s->data = s->data->next;
-      if (s->data)
-      {
-         s->current = s->data->data;
-         s->current_cap = (capture *)(s->current + 1);
-      }
-      else
-      {
-         s->current = NULL;
-         s->current_cap = NULL;
-         s->finished = 1;
-      }
-   }
-
-   if (!s->finished)
-   {
-      s->prev = val;
-      s->val = load_val (s->current_cap);
-      s->byte = s->val & 0xff;
-      s->diff = s->prev ^ s->val;
-   }
-}
-
-int stream_finished (stream_info_t *s)
-{
-   return s->finished;
-}
-#if 0
-#define stream_next_command(s) stream_next_transition (s, CMD, 0)
-#define stream_next_data(s) stream_next_transition (s, DataReq, 1)
-
-int stream_next_transition (stream_info_t *s, int control, int dir)
-{
-   do
-   {
-      stream_next (s);
-      if (stream_finished (s))
-         return -1;
-   } while (!(bit (s->diff, control) && bit(s->val, control) == dir));
-
-   return s->val & 0xff;
-}
-#endif
-int stream_next_group (stream_info_t *s)
-{
-   do
-   {
-      stream_next (s);
-      if (stream_finished (s))
-         return -1;
-      if (bit (s->diff, CMD) && !bit(s->val, CMD))
-      {
-         s->type = CMD;
-         s->command_count++;
-         return CMD;
-      }
-      if (bit (s->diff, DataReq) && bit(s->val, DataReq))
-      {
-         s->type = DataReq;
-         s->data_count++;
-         return DataReq;
-      }
-   } while (1);
-}
-
-static uint8_t printable_char (int data)
-{
-   if (data >= ' ' && data <= 126)
-      return data;
-   return '.';
-}
-
-static void display_and_advance (stream_info_t *s1, stream_info_t *s2)
-{
-      if (s1->type != -1 && s2->type != -1)
-      {
-         printf ("%s%2.2x(%c)%s\t\t", s1->type == CMD ? "\t" : "", s1->byte, printable_char (s1->byte), s1->type == CMD ? "" : "\t");
-         printf ("%s%2.2x(%c)%s", s2->type == CMD ? "\t" : "", s2->byte, printable_char (s2->byte), s2->type == CMD ? "" : "\t");
-         printf ("\t%d,%d\t%d,%d", s1->command_count, s1->data_count, s2->command_count, s2->data_count);
-         printf ("\n");
-      }
-
-      stream_next_group (s1);
-      stream_next_group (s2);
-}
-
-static void read_data_block (stream_info_t *s)
-{
-   s->buff_size = 0;
-   while (stream_next_group (s) == DataReq)
-   {
-      s->buffer[s->buff_size++] = s->byte;
-   } 
-}
-
-static void display_buffers (stream_info_t *s1, stream_info_t *s2)
-{
-   int i;
-   printf ("buffers: %d, %d\n", s1->buff_size, s2->buff_size);
-   
-   for (i = 0; i < s1->buff_size; i++)
-      printf ("%c", printable_char (s1->buffer[i]));
-   if (s1->buff_size)
-      printf ("\n");
-   for (i = 0; i < s2->buff_size; i++)
-      printf ("%c", printable_char (s2->buffer[i]));
-   if (s2->buff_size)
-      printf ("\n");
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-   for (i = 0; i < max (s1->buff_size, s2->buff_size); i++)
-   {
-      if ((i < s1->buff_size) && (i < s2->buff_size))
-      {
-         if (s1->buffer[i] != s2->buffer[i])
-            printf ("buffer error: byte %d: %2.2x(%c) != %2.2x(%c)\n", i, s1->buffer[i], printable_char (s1->buffer[i]), s2->buffer[i], printable_char (s2->buffer[i]));
-      }
-      else if (i >= s1->buff_size)
-         printf ("buffer error: byte: %d NULL != %2.2x(%c)\n", i, s2->buffer[i], printable_char (s2->buffer[i]));
-      else if (i >= s2->buff_size)
-         printf ("buffer error: byte: %d %2.2x(%c) != NULL\n", i, s1->buffer[i], printable_char (s1->buffer[i]));
-      else
-         printf ("THIS SHOULDN'T HAPPEN\n");
-   }
-}
-
-static void parse_data_block (stream_info_t *s1, stream_info_t *s2)
-{
-   printf ("data block: command: %2.2x\n", s1->byte);
-
-   //display_and_advance (s1, s2);
-   //stream_next_group (s1);
-   //stream_next_group (s2);
-   read_data_block (s1);
-   read_data_block (s2);
-
-   display_buffers (s1, s2);
-}
-
-void compare_streams (stream_info_t *s1, stream_info_t *s2)
-{
-   //int i = 0;
-   printf ("compare streams: %s, %s\n", s1->filename, s2->filename);
-
-   //printf ("c1: %2.2x, c2: %2.2x\n", stream_next_command (s1), stream_next_command (s2));
-
-   //stream_next (s1);
-   //stream_next (s2);
-   stream_next_group (s1);
-   stream_next_group (s2);
-
-   while (!stream_finished (s1) && !stream_finished (s2))
-   {
-      int handled = 0;
-
-      if (s1->type == s2->type && s1->byte == s2->byte)
-      {
-         if (s1->type == CMD)
-         {
-            switch (s1->byte)
-            {
-               case PERTEC_write:
-               case PERTEC_read:
-                  parse_data_block (s1, s2);
-                  handled = 1;
-                  break;
-            }
-         }
-      }
-
-      if (!handled)
-      {
-         while (s2->type != s1->type || s2->byte != s1->byte)
-         {
-            printf ("skipping: %d: %2.2x (!= %d: %2.2x)\n", s2->type, s2->byte, s1->type, s1->byte);
-            stream_next_group (s2); // walk second stream up
-         }
-      }
-
-      display_and_advance (s1, s2);
-   }
-}
-#endif

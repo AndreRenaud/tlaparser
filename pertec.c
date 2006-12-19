@@ -10,11 +10,11 @@ static int decode_pertec_command (capture *c, list_t *channels)
     int irev, iwrt, iwfm, iedit, ierase;
 
     /* negative logic */
-    irev = capture_bit_name (c, "irev", channels) ? 0 : 1;
-    iwrt = capture_bit_name (c, "iwrt", channels) ? 0 : 1;
-    iwfm = capture_bit_name (c, "iwfm", channels) ? 0 : 1;
-    iedit = capture_bit_name (c, "iedit", channels) ? 0 : 1;
-    ierase = capture_bit_name (c, "ierase", channels) ? 0 : 1;
+    irev = capture_bit_name (c, "irev", channels);
+    iwrt = capture_bit_name (c, "iwrt", channels);
+    iwfm = capture_bit_name (c, "iwfm", channels);
+    iedit = capture_bit_name (c, "iedit", channels);
+    ierase = capture_bit_name (c, "ierase", channels);
 
     return (irev << 4) | (iwrt << 3) |  (iwfm << 2) | (iedit << 1) | (ierase << 0);
 }
@@ -31,22 +31,6 @@ static const char *pertec_command_name (int cmd)
     }
 }
 
-static unsigned int probe_hex (capture *c, int probe)
-{
-    unsigned int retval = 0;
-    int i;
-    channel_info chan;
-
-    chan.probe = probe;
-    for (i = 0; i < 8; i++)
-    {
-	chan.index = i;
-	retval |= (capture_bit (c, &chan) ? 1 : 0) << i;
-    }
-
-    return retval;
-}
-
 struct pin_assignments
 {
     int init;
@@ -58,18 +42,16 @@ struct pin_assignments
 static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 {
     static struct pin_assignments pa = {-1};
-    int i;
-
+    if (!prev) // skip first sample
+	return;
     if (pa.init == -1 && c) // work these out once only, to speed things up
     {
 	pa.init = 1;
-	pa.igo = capture_channel_details (c, "igo");
-	pa.irew = capture_channel_details (c, "irew");
+	pa.igo = capture_channel_details (c, "igo", channels);
+	pa.irew = capture_channel_details (c, "irew", channels);
     }
 
-    if (!prev) // skip first sample
-	return;
-
+    /* falling edge */
     if (!capture_bit (prev, pa.igo) &&
 	capture_bit (c, pa.igo))
     {
@@ -77,8 +59,9 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	printf ("igo: %x %s\n", cmd, pertec_command_name (cmd));
     }
 
-    if (!capture_bit (prev, pa.irew) &&
-	capture_bit (c, pa.irew))
+    /* falling edge */
+    if (capture_bit (prev, pa.irew) &&
+	!capture_bit (c, pa.irew))
     {
 	printf ("rewind\n");
     }
@@ -90,7 +73,7 @@ static void parse_pertec_bulk_cap (bulk_capture *b, list_t *channels)
     int i;
     capture *c, *prev = NULL;
 
-    c = (capture *)(b+1);//(char *)b+sizeof (bulk_capture);
+    c = b->data;
 
     for (i = 0; i < b->length / sizeof (capture); i++)
     {

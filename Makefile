@@ -22,6 +22,7 @@ tlaparser.c: parser.c
 
 %.o: %.c $(HEADERS)
 	$(CC) -c -o $@ $< $(CFLAGS)
+
 %.c: %.y $(HEADERS)
 	$(BISON) -v -d -o $@ $<
 

@@ -17,6 +17,8 @@
 
 extern FILE *yyin;
 extern int yyparse (void *YYPARSE_PARAM);
+extern list_t *final_capture;
+extern list_t *final_channels;
 
 static void usage (char *prog)
 {
@@ -58,7 +60,7 @@ static list_t *load_capture (char *filename)
     }
 
     yyparse (NULL);
-    cap = datasets;
+    cap = final_capture;
     fclose (yyin);
 
     return cap;
@@ -162,23 +164,23 @@ int main (int argc, char *argv[])
 #endif
 
     if (list_channels)
-	dump_channel_list (channels);
+	dump_channel_list (final_channels);
 
     if (dump)
     {
 	if (cap1)
-	    dump_capture_list (cap1, file1, channels);
+	    dump_capture_list (cap1, file1, final_channels);
 	if (cap2)
-	    dump_capture_list (cap2, file2, channels);
+	    dump_capture_list (cap2, file2, final_channels);
     }
 
 #ifdef PARSE_SCSI
     if (scsi)
     {
 	if (cap1)
-	    parse_scsi (cap1, file1, channels);
+	    parse_scsi (cap1, file1, final_channels);
 	if (cap2)
-	    parse_scsi (cap2, file2, channels);
+	    parse_scsi (cap2, file2, final_channels);
     }
 #endif
 
@@ -186,14 +188,14 @@ int main (int argc, char *argv[])
     if (xd)
     {
 	if (cap1)
-	    parse_xd (cap1, file1, channels);
+	    parse_xd (cap1, file1, final_channels);
     }
 #endif
 
 #ifdef PARSE_PERTEC
     if (pertec)
 	if (cap1)
-	    parse_pertec (cap1, file1, channels);
+	    parse_pertec (cap1, file1, final_channels);
 #endif
 
     return 0;

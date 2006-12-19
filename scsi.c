@@ -245,7 +245,8 @@ static void parse_scsi_bulk_cap (bulk_capture *b, list_t *channels)
     int i;
     capture *c, *prev = NULL;
 
-    c = (capture *)(b+1);//(char *)b+sizeof (bulk_capture);
+    //c = (capture *)(b+1);//(char *)b+sizeof (bulk_capture);
+    c = b->data;
 
     for (i = 0; i < b->length / sizeof (capture); i++)
     {
