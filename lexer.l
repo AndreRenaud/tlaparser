@@ -74,7 +74,7 @@ C(l|w|j|s|n|net|c)m[a-zA-Z0-9]+    {yylval.string = strdup (yytext); return t_C;
 .	    {printf ("Weird char %x (%c) @ 0x%lx\n", (int)yytext[0], yytext[0], ftell (yyin));}
 
 <dataset>"\n" { data[datasetpos++]=yytext[0]; 
-		line_number++;		
+		line_number++;
 		if (datasetpos * 10 / datasetlen != percentage) // 10% gaps, don't do below as it is slightly slower
 		{
 		    percentage = datasetpos * 10 / datasetlen;

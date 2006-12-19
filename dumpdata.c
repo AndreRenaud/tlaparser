@@ -45,7 +45,7 @@ int dump_capture (bulk_capture *b)
    int i;
    capture *c, *prev = NULL;
 
-   c = (capture *)(b+1);//(char *)b+sizeof (bulk_capture);
+   c = b->data;
 
    //printf ("Capture Group: %p\n", b);
    for (i = 0; i < b->length / sizeof (capture); i++)
@@ -64,7 +64,7 @@ void dump_channel_list (list_t *channels)
     for (n = channels; n!= NULL; n = n->next)
     {
 	channel_info *c = n->data;
-	printf ("%s->%s (Probe %d, index %d)\n", c->probe_name, c->name, c->probe, c->index);
+	printf ("%s->%s Probe %d, index %d %s\n", c->probe_name, c->name, c->probe, c->index, c->inverted ? "Inverted" : "");
     }
 }
 
@@ -206,7 +206,7 @@ bulk_capture *build_dump (unsigned char *data, int length)
 
    retval->length = length;
 
-   printf ("build_dump: %p, %d -> %p, %d\n", data, length, retval->data, retval->length);
+   //printf ("build_dump: %p, %d -> %p, %d\n", data, length, retval->data, retval->length);
 
    return retval;
 }
