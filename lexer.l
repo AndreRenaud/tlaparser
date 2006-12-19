@@ -5,13 +5,14 @@
 
 #define MAX_STR_CONST 10000
 
-char string_buf[MAX_STR_CONST];
-char *string_buf_ptr;
+static char string_buf[MAX_STR_CONST];
+static char *string_buf_ptr;
 
-int datasetpos;
-int datasetlen;
+static int datasetpos;
+static int datasetlen;
+static int percentage = 0; /* how much of the data have we loaded */
 
-unsigned char data[MAX_DATA_LEN];
+static unsigned char data[MAX_DATA_LEN];
 
 int line_number = 1;
 %}
@@ -67,7 +68,14 @@ C(l|w|j|s|n|net|c)m[a-zA-Z0-9]+    {yylval.string = strdup (yytext); return t_C;
 "\""      string_buf_ptr = string_buf; BEGIN(str);
 .	    {printf ("Weird char %x (%c) @ 0x%lx\n", (int)yytext[0], yytext[0], ftell (yyin));}
 
-<dataset>"\n" {data[datasetpos++]=yytext[0]; line_number++;}
+<dataset>"\n" { data[datasetpos++]=yytext[0]; 
+		line_number++;		
+		if (datasetpos * 10 / datasetlen != percentage) // 10% gaps, don't do below as it is slightly slower
+		{
+		    percentage = datasetpos * 10 / datasetlen;
+		    printf ("%d%% loaded\n", percentage * 10);
+		}
+	      }
 <dataset>.    {data[datasetpos++]=yytext[0]; 
 		if (datasetpos >= datasetlen)
 		{
@@ -77,7 +85,6 @@ C(l|w|j|s|n|net|c)m[a-zA-Z0-9]+    {yylval.string = strdup (yytext); return t_C;
 		    yylval.data.data = data;
 		    yylval.data.length = datasetpos;
 		    return t_DATASET;
-
 		}
 	      }
 
