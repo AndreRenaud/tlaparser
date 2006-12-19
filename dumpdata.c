@@ -67,7 +67,7 @@ void dump_channel_list (list_t *channels)
     for (n = channels; n!= NULL; n = n->next)
     {
 	channel_info *c = n->data;
-	printf ("%s->%s\n", c->probe_name, c->name);
+	printf ("%s->%s (Probe %d, index %d)\n", c->probe_name, c->name, c->probe, c->index);
     }
 }
 
@@ -85,17 +85,18 @@ void dump_capture_list (list_t *cap, char *name, list_t *channels)
     }
 }
 
-int capture_bit (capture *cap, pin_info_t pin)
+int capture_bit (capture *cap, channel_info *c)
 {
-    if (pin.probe < 0 || pin.probe >= CAPTURE_DATA_BYTES || pin.index < 0 || pin.index >= 8)
+    if (c->probe < 0 || c->probe >= CAPTURE_DATA_BYTES || c->index < 0 || c->index >= 8)
     {
-	printf ("Invalid probe: %d index: %d", pin.probe, pin.index);
+	printf ("Invalid probe: %d index: %d", c->probe, c->index);
 	assert (0);
     }
-    return (cap->data[pin.probe] & (1 << pin.index)) ? 1 : 0;
+#warning "Possibly should be working out if the pin has been tagged as 'inverted' here, and doing the same"
+    return (cap->data[c->probe] & (1 << c->index)) ? 1 : 0;
 }
 
-int capture_channel_details (capture *cap, char *channel_name, pin_info_t *pinp)
+channel_info *capture_channel_details (capture *cap, char *channel_name)
 {
     list_t *n;
 
@@ -104,51 +105,21 @@ int capture_channel_details (capture *cap, char *channel_name, pin_info_t *pinp)
 	channel_info *c = n->data;
 	if (strcasecmp (c->name, channel_name) == 0)
 	{
-	    char *probes={"EADC"};
-	    int i;
-	    int probe = -1;
-	    int index;
-
-	    if (strlen (c->probe_name) != 4 || c->probe_name[2] != '_')
-	    {
-		printf ("Weird probe: %s\n", c->probe_name);
-		return -1;
-	    }
-
-	    index = c->probe_name[3] - '0';
-
-
-	    for (i = 0; i < 4; i++)
-		if (probes[i] == toupper (c->probe_name[0]))
-		    probe = i * 4;
-	    if (probe == -1)
-	    {
-		printf ("Can't identify probe %s\n", c->probe_name);
-		return -1;
-	    }
-
-	    probe += (3 - (c->probe_name[1] - '0'));
-
-#warning "Weird probe bump due to xD tla oddity - not sure why"
-	    probe += 2;
-
-	    pinp->probe = probe;
-	    pinp->index = index;
-
-	    return 0;
+	    return c;
 	}
     }
 
     printf ("Unknown channel: %s\n", channel_name);
-    return -1;
+    return NULL;
 }
 
 int capture_bit_name (capture *cap, char *channel_name, list_t *channels)
 {
-    pin_info_t p;
+    channel_info *chan;
 
-    if (capture_channel_details (cap, channel_name, &p) == 0)
-	return capture_bit (cap, p);
+    chan = capture_channel_details (cap, channel_name);
+    if (chan)
+	return capture_bit (cap, chan);
     return -1;
 }
 
@@ -171,12 +142,22 @@ int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *cha
     return 0;
 }
 
-channel_info *build_channel (char *probe, char *name)
+/* Works out where in the binary blob the channel info is found
+ * Channels are ordered as specified in the file (So the order we call build_channel matters)
+ * Probes are also paired, so e3 & e2 are always together, so are a1 & a0. If a1 is entirely unused,
+ * it will not appear in the tla file, but we must still account for it (that is the bit below looking 
+ * for 3 & 1, checking that we haven't skipped a probe
+ * This is all vaguely confusing
+ */
+channel_info *build_channel (char *probe_name, char *name)
 {
     channel_info *retval;
+    static int probe = -1; // so that we ++ to 0
+    static char last_probe[10] = "\0";
+#warning "Should cope with 'ClaChannelInversion' option in tla file to know if a channel is inverted, and then invert automatically in capture_bit"
 
     retval = malloc (sizeof (channel_info));
-    strncpy (retval->probe_name, probe, 20);
+    strncpy (retval->probe_name, probe_name, 20);
     retval->probe_name[19] = '\0';
 
     // they seem to have leading & trailing $ signs on them, so chop them off if they're there
@@ -188,6 +169,24 @@ channel_info *build_channel (char *probe, char *name)
     else
 	strncpy (retval->name, name, 20);
     retval->name[19] = '\0';
+
+    if (strncmp (probe_name, last_probe, 2) != 0)
+    {
+	if (probe != -1 && last_probe[0] != probe_name[0] && probe_name[1] != '3' && probe_name[1] != '1') // we've dropped half of a probe pair
+	    probe++;
+	strcpy (last_probe, probe_name);
+
+	probe++;
+
+    }
+
+    retval->probe = probe;
+    retval->index = atoi (&probe_name[3]);
+
+#if 0
+    printf ("Added channel %s %s - (%d, %d)\n",
+	    retval->probe_name, retval->name, retval->probe, retval->index);
+#endif
 
     return retval;
 }

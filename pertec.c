@@ -4,6 +4,7 @@
 #include "common.h"
 #include "pertec.h"
 
+
 static int decode_pertec_command (capture *c, list_t *channels)
 {
     int irev, iwrt, iwfm, iedit, ierase;
@@ -29,24 +30,41 @@ static const char *pertec_command_name (int cmd)
 	default:   return "unknown";
     }
 }
+
+static unsigned int probe_hex (capture *c, int probe)
+{
+    unsigned int retval = 0;
+    int i;
+    channel_info chan;
+
+    chan.probe = probe;
+    for (i = 0; i < 8; i++)
+    {
+	chan.index = i;
+	retval |= (capture_bit (c, &chan) ? 1 : 0) << i;
+    }
+
+    return retval;
+}
+
 struct pin_assignments
 {
     int init;
 
-    pin_info_t igo;
-    pin_info_t irew;
+    channel_info *igo;
+    channel_info *irew;
 };
 
 static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 {
     static struct pin_assignments pa = {-1};
-    static int prev_irew = 0;
+    int i;
 
-    if (pa.init == -1 && c)
+    if (pa.init == -1 && c) // work these out once only, to speed things up
     {
 	pa.init = 1;
-	capture_channel_details (c, "igo", &pa.igo);
-	capture_channel_details (c, "irew", &pa.irew);
+	pa.igo = capture_channel_details (c, "igo");
+	pa.irew = capture_channel_details (c, "irew");
     }
 
     if (!prev) // skip first sample
@@ -63,12 +81,6 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	capture_bit (c, pa.irew))
     {
 	printf ("rewind\n");
-    }
-
-    if (prev_irew != capture_bit (c, pa.irew))
-    {
-	printf ("irew: %d\n", capture_bit (c, pa.irew));
-	prev_irew = capture_bit (c, pa.irew);
     }
 
 }
@@ -93,12 +105,11 @@ void parse_pertec (list_t *cap, char *filename, list_t *channels)
     list_t *n;
     int i;
 
-    printf ("Pertec analysis of file: '%s'", filename);
+    printf ("Pertec analysis of file: '%s'\n", filename);
 
     for (n = cap, i = 0; n != NULL; n = n->next, i++)
     {
 	printf ("Parsing capture block %d\n", i);
 	parse_pertec_bulk_cap (n->data, channels);
     }
-
 }
