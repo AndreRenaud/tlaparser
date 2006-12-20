@@ -19,6 +19,21 @@ static int decode_pertec_command (capture *c, list_t *channels)
     return (irev << 4) | (iwrt << 3) |  (iwfm << 2) | (iedit << 1) | (ierase << 0);
 }
 
+static int decode_write_data (capture *c, list_t *channels)
+{
+    char name[4];
+    int i;
+    int retval = 0;
+
+    for (i = 0; i < 8; i++)
+    {
+	sprintf (name, "iw%d", i);
+	retval |= capture_bit_name (c, name, channels) << i;
+    }
+
+    return retval;
+}
+
 static const char *pertec_command_name (int cmd)
 {
     switch (cmd)
@@ -31,17 +46,36 @@ static const char *pertec_command_name (int cmd)
     }
 }
 
+static void dump_buffer (unsigned char *buffer, int len)
+{
+    int i;
+    printf ("buffer: %d\n", len);
+    for (i = 0; i < len; i++)
+    {
+	if (i % 24 == 0)
+	    printf ("\t%4.4x: ", i);
+	printf ("%2.2x%s", buffer[i], i % 24 == 23 ? "\n" : " ");
+    }
+    printf ("\n");
+}
+
 struct pin_assignments
 {
     int init;
 
     channel_info *igo;
     channel_info *irew;
+    channel_info *iwstr;
+    channel_info *ilwd;
 };
 
 static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 {
     static struct pin_assignments pa = {-1};
+    static unsigned char buffer[10240];
+    static int buffer_pos = 0;
+    static int last_word = 0;
+
     if (!prev) // skip first sample
 	return;
     if (pa.init == -1 && c) // work these out once only, to speed things up
@@ -49,6 +83,8 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	pa.init = 1;
 	pa.igo = capture_channel_details (c, "igo", channels);
 	pa.irew = capture_channel_details (c, "irew", channels);
+	pa.iwstr = capture_channel_details (c, "iwstr", channels);
+	pa.ilwd = capture_channel_details (c, "ilwd", channels);
     }
 
     /* falling edge */
@@ -57,6 +93,8 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
     {
 	int cmd = decode_pertec_command (c, channels);
 	printf ("igo: %x %s\n", cmd, pertec_command_name (cmd));
+	buffer_pos = 0;
+	last_word = 0;
     }
 
     /* falling edge */
@@ -65,6 +103,23 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
     {
 	printf ("rewind\n");
     }
+
+    if (capture_bit (prev, pa.iwstr) &&
+	!capture_bit (c, pa.iwstr))
+    {
+	buffer[buffer_pos++] = decode_write_data (c, channels);	
+
+	if (last_word)
+	{
+	    dump_buffer (buffer, buffer_pos);
+	    buffer_pos = 0;
+	    last_word = 0;
+	}
+    }
+
+    if (!capture_bit (prev, pa.ilwd) &&
+	capture_bit (c, pa.ilwd))
+	last_word = 1;
 
 }
 
