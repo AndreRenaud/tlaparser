@@ -34,6 +34,21 @@ static int decode_write_data (capture *c, list_t *channels)
     return retval;
 }
 
+static int decode_read_data (capture *c, list_t *channels)
+{
+    char name[4];
+    int i;
+    int retval = 0;
+
+    for (i = 0; i < 8; i++)
+    {
+	sprintf (name, "ir%d", i);
+	retval |= capture_bit_name (c, name, channels) << i;
+    }
+
+    return retval;
+}
+
 static const char *pertec_command_name (int cmd)
 {
     switch (cmd)
@@ -66,6 +81,7 @@ struct pin_assignments
     channel_info *igo;
     channel_info *irew;
     channel_info *iwstr;
+    channel_info *irstr;
     channel_info *ilwd;
 };
 
@@ -84,6 +100,7 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	pa.igo = capture_channel_details (c, "igo", channels);
 	pa.irew = capture_channel_details (c, "irew", channels);
 	pa.iwstr = capture_channel_details (c, "iwstr", channels);
+	pa.irstr = capture_channel_details (c, "irstr", channels);
 	pa.ilwd = capture_channel_details (c, "ilwd", channels);
     }
 
@@ -105,6 +122,18 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
     if (capture_bit_transition (c, prev, pa.iwstr, TRANSITION_falling_edge))
     {
 	buffer[buffer_pos++] = decode_write_data (c, channels);	
+
+	if (last_word)
+	{
+	    dump_buffer (buffer, buffer_pos);
+	    buffer_pos = 0;
+	    last_word = 0;
+	}
+    }
+
+    if (capture_bit_transition (c, prev, pa.irstr, TRANSITION_falling_edge))
+    {
+	buffer[buffer_pos++] = decode_read_data (c, channels);	
 
 	if (last_word)
 	{
