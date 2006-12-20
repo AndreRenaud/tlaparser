@@ -126,7 +126,7 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 	    cur_data = cur_data_len = cle_mode = 0;
 	}
 
-	if (capture_bit_transition (c, prev, "nwe", channels, TRANSITION_low_to_high))
+	if (capture_bit_transition_name (c, prev, "nwe", channels, TRANSITION_low_to_high))
 	{
 	    uint8_t data = xd_data (c, channels);
 	    //printf ("Write\n");
@@ -142,7 +142,7 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 	    }
 	}
 
-	if (capture_bit_transition (c, prev, "nre", channels, TRANSITION_low_to_high))
+	if (capture_bit_transition_name (c, prev, "nre", channels, TRANSITION_low_to_high))
 	{
 	    uint8_t data = xd_data (c, channels);
 	    //printf ("read\n");

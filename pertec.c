@@ -87,9 +87,9 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	pa.ilwd = capture_channel_details (c, "ilwd", channels);
     }
 
-    /* falling edge */
-    if (!capture_bit (prev, pa.igo) &&
-	capture_bit (c, pa.igo))
+#warning "Should be looking at ITAD, IFAD to work out if this is for us or not"
+
+    if (capture_bit_transition (c, prev, pa.igo, TRANSITION_falling_edge))
     {
 	int cmd = decode_pertec_command (c, channels);
 	printf ("igo: %x %s\n", cmd, pertec_command_name (cmd));
@@ -97,15 +97,12 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	last_word = 0;
     }
 
-    /* falling edge */
-    if (capture_bit (prev, pa.irew) &&
-	!capture_bit (c, pa.irew))
+    if (capture_bit_transition (c, prev, pa.irew, TRANSITION_falling_edge))
     {
 	printf ("rewind\n");
     }
 
-    if (capture_bit (prev, pa.iwstr) &&
-	!capture_bit (c, pa.iwstr))
+    if (capture_bit_transition (c, prev, pa.iwstr, TRANSITION_falling_edge))
     {
 	buffer[buffer_pos++] = decode_write_data (c, channels);	
 
@@ -117,10 +114,13 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	}
     }
 
-    if (!capture_bit (prev, pa.ilwd) &&
-	capture_bit (c, pa.ilwd))
+    if (capture_bit_transition (c, prev, pa.ilwd, TRANSITION_rising_edge))
 	last_word = 1;
 
+    /* Should have a check here that makes sure IDBY is never high when IFBY is low */
+
+    /* Should have a check here that looks as how ILDP, IDENT & IREW all tie together 
+     * (make sure that we do BOT handling properly */
 }
 
 static void parse_pertec_bulk_cap (bulk_capture *b, list_t *channels)

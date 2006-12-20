@@ -12,6 +12,9 @@ enum
 {
     TRANSITION_low_to_high,
     TRANSITION_high_to_low,
+
+    TRANSITION_falling_edge = TRANSITION_high_to_low,
+    TRANSITION_rising_edge = TRANSITION_low_to_high,
 };
 
 
@@ -81,7 +84,9 @@ int capture_bit_name (capture *cap, char *channel_name, list_t *channels);
 int capture_bit (capture *cap, channel_info *c);
 
 // returns true/false if a given bit performs a transition between two captures (dir is TRANSITION_...)
-int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *channels, int dir);
+int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int dir);
+// same as above, but specify the channel by name
+int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t *channels, int dir);
 
 
 uint64_t capture_time (capture *c);

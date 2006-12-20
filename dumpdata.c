@@ -124,14 +124,15 @@ int capture_bit_name (capture *cap, char *channel_name, list_t *channels)
     return -1;
 }
 
-int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *channels, int dir)
+int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int dir)
 {
     int n, p;
-
-    p = capture_bit_name (prev, name, channels);
+    if (!chan)
+	return -1;
+    p = capture_bit (prev, chan);
     if (p < 0)
 	return -1;
-    n = capture_bit_name (cur, name, channels);
+    n = capture_bit (cur, chan);
     if (n < 0)
 	return -1;
 
@@ -141,6 +142,14 @@ int capture_bit_transition (capture *cur, capture *prev, char *name, list_t *cha
 	return 1;
 
     return 0;
+}
+
+int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t *channels, int dir)
+{
+    channel_info *chan;
+    chan = capture_channel_details (cur, name, channels);
+
+    return capture_bit_transition (cur, prev, chan, dir);
 }
 
 /* Works out where in the binary blob the channel info is found
