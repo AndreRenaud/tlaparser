@@ -4,6 +4,13 @@
 #include "common.h"
 #include "pertec.h"
 
+enum
+{
+    CMD_READ_FWD = 0x00,
+    CMD_SPACE_FWD = 0x01,
+    CMD_WRITE = 0x08,
+    CMD_WRITE_FM = 0x0c,
+};
 
 static int decode_pertec_command (capture *c, list_t *channels)
 {
@@ -53,10 +60,10 @@ static const char *pertec_command_name (int cmd)
 {
     switch (cmd)
     {
-	case 0x00: return "read_fwd";
-	case 0x01: return "space_fwd";
-	case 0x08: return "write";
-	case 0x0c: return "write_fm";
+	case CMD_READ_FWD: return "read_fwd";
+	case CMD_SPACE_FWD: return "space_fwd";
+	case CMD_WRITE: return "write";
+	case CMD_WRITE_FM: return "write_fm";
 	default:   return "unknown";
     }
 }
@@ -92,6 +99,8 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
     static unsigned char buffer[10240];
     static int buffer_pos = 0;
     static int last_word = 0;
+    static int writing = 0;
+    static int reading = 0;
 
     if (!prev) // skip first sample
 	return;
@@ -114,6 +123,16 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	printf ("igo: %x %s\n", cmd, pertec_command_name (cmd));
 	buffer_pos = 0;
 	last_word = 0;
+
+	if (cmd == CMD_READ_FWD)
+	    reading = 1;
+	else if (cmd == CMD_WRITE)
+	    writing = 1;
+    }
+
+    if (reading && writing)
+    {
+	printf ("ARGH! SOMEHOW I'M BOTH READING & WRITING\n");
     }
 
     if (capture_bit_transition (c, prev, pa.irew, TRANSITION_falling_edge))
@@ -121,7 +140,7 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	printf ("rewind\n");
     }
 
-    if (capture_bit_transition (c, prev, pa.iwstr, TRANSITION_falling_edge))
+    if (writing && capture_bit_transition (c, prev, pa.iwstr, TRANSITION_falling_edge))
     {
 	buffer[buffer_pos++] = decode_write_data (c, channels);	
 
@@ -130,10 +149,11 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	    dump_buffer ("Write", buffer, buffer_pos);
 	    buffer_pos = 0;
 	    last_word = 0;
+	    writing = 0;
 	}
     }
 
-    if (capture_bit_transition (c, prev, pa.irstr, TRANSITION_falling_edge))
+    if (reading && capture_bit_transition (c, prev, pa.irstr, TRANSITION_falling_edge))
     {
 	buffer[buffer_pos++] = decode_read_data (c, channels);	
 
@@ -144,6 +164,7 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	dump_buffer ("Read", buffer, buffer_pos);
 	buffer_pos = 0;
 	last_word = 0;
+	reading = 0;
     }
 
     if (capture_bit_transition (c, prev, pa.ilwd, TRANSITION_rising_edge))
