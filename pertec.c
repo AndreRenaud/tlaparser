@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdarg.h>
+#include <stdint.h>
 
 #include "dumpdata.h"
 #include "common.h"
@@ -11,6 +13,30 @@ enum
     CMD_WRITE = 0x08,
     CMD_WRITE_FM = 0x0c,
 };
+
+static int time_log (capture *c, char *msg, ...)
+{
+    char buffer[1024];
+    va_list ap;
+    uint64_t time_now = ((uint64_t)c->time_top) << 32 | ((uint64_t)c->time_bottom);
+    static uint64_t last_time = -1;
+
+    va_start (ap, msg);
+    vsnprintf (buffer, 1024, msg, ap);
+    va_end (ap);
+    buffer[1023] = '\0';
+
+    if (last_time != -1)
+	printf ("[%16.16llx] ", time_now - last_time);
+    else
+	printf ("[None            ] ");
+    last_time = time_now;
+
+    printf ("%s", buffer);
+
+    return 0;
+
+}
 
 static int decode_pertec_command (capture *c, list_t *channels)
 {
@@ -120,7 +146,7 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
     if (capture_bit_transition (c, prev, pa.igo, TRANSITION_falling_edge))
     {
 	int cmd = decode_pertec_command (c, channels);
-	printf ("igo: %x %s\n", cmd, pertec_command_name (cmd));
+	time_log (c, "igo: %x %s\n", cmd, pertec_command_name (cmd));
 	buffer_pos = 0;
 	last_word = 0;
 
@@ -137,7 +163,7 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 
     if (capture_bit_transition (c, prev, pa.irew, TRANSITION_falling_edge))
     {
-	printf ("rewind\n");
+	time_log (c, "rewind\n");
     }
 
     if (writing && capture_bit_transition (c, prev, pa.iwstr, TRANSITION_falling_edge))
