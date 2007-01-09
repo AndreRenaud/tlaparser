@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "common.h"
 #include "dumpdata.h"
 #include "parser.h"
 #ifdef PARSE_SCSI
@@ -37,7 +38,7 @@ static void usage (char *prog)
 #ifdef PARSE_PERTEC
 		     "\t-p	    : pertec check\n"
 #endif
-		     "\t-o options  : List of comma separated options\n"
+		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n"
 	    );
 }
 
@@ -70,15 +71,54 @@ static char *options = NULL;
 
 int option_set (char *name)
 {
-    char *s = options;
+    return option_val (name, NULL, 0);
+}
+
+int option_val (char *name, char *buffer, int buff_len)
+{
+    char *s;
     int namelen = strlen (name);
 
     for (s = options; s != NULL; s = strchr (s, ','))
     {
 	if (strncmp (s, name, namelen) == 0 &&
   	    strlen (s) >= namelen &&
-	    (s[namelen] == ',' || s[namelen] == '\0'))
+	    (s[namelen] == '=' || s[namelen] == ',' || s[namelen] == '\0'))
+	{
+	    char *optval;
+	    int optlen;
+	    char *end;
+
+	    if (s[namelen] == '\0' || s[namelen] == ',')
+		optval = NULL;
+	    else
+		optval = &s[namelen + 1];
+
+	    if (optval)
+	    {
+		end = strchr (optval, ',');
+
+		if (end)
+		    optlen = end - optval;
+		else
+		    optlen = strlen (optval);
+
+		optlen = min (optlen, buff_len);
+
+		if (buffer)
+		{
+		    memcpy (buffer, optval, optlen);
+		    if (optlen < buff_len)
+			buffer[optlen] = '\0';
+		    else
+			buffer[optlen - 1] = '\0';
+		}
+	    }
+	    else if (buffer && optlen)
+		*buffer = '\0';
+
 	    return 1;
+	}
     }
     return 0;
 }
@@ -136,11 +176,13 @@ int main (int argc, char *argv[])
 		return (EXIT_FAILURE);
 	}
     }
+
     if (optind < argc)
     {
 	usage (argv[0]);
 	return (EXIT_FAILURE);
     }
+
 
     if (!dump && !compare && !file1)
     {

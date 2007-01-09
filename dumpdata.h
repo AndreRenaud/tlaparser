@@ -89,6 +89,7 @@ int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int
 int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t *channels, int dir);
 
 
+/* Returns the time of the sample in nano seconds */
 uint64_t capture_time (capture *c);
 
 bulk_capture *build_dump (unsigned char *data, int length);

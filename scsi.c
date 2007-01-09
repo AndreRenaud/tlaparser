@@ -208,8 +208,8 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
 	    decode_scsi_command (last_phase, buffer, last_phase_command);
 	    buffer_len = 0;
 	    last_cmd_len = 0;
-	    printf ("\n%llu %s\n\t", capture_time (c) - last_time, scsi_phases[phase]);
-	    last_time = capture_time (c);
+	    printf ("\n%llu %s\n\t", capture_time (c) / 1000 - last_time, scsi_phases[phase]);
+	    last_time = capture_time (c) / 1000;
 	}
 	ch = get_data (c);
 	if (phase == 2 && last_cmd_len == 0) // COMMAND phase, first byte, so record the command

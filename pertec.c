@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "dumpdata.h"
 #include "common.h"
 #include "pertec.h"
+
+static int pertec_id = 0; /* Which pertec id (combination of IFAD << 2 | ITAD0 << 1 | ITAD1 << 0) are we? */
 
 enum
 {
@@ -18,7 +21,8 @@ static int time_log (capture *c, char *msg, ...)
 {
     char buffer[1024];
     va_list ap;
-    uint64_t time_now = ((uint64_t)c->time_top) << 32 | ((uint64_t)c->time_bottom);
+    //uint64_t time_now = capture_time (c); // we want it in nano-seconds
+    uint64_t time_now = capture_time (c) / 1000; // we want it in useconds
     static uint64_t last_time = -1;
 
     va_start (ap, msg);
@@ -26,10 +30,11 @@ static int time_log (capture *c, char *msg, ...)
     va_end (ap);
     buffer[1023] = '\0';
 
+    printf ("[%10.10lld] ", time_now);
     if (last_time != -1)
-	printf ("[%16.16llx] ", time_now - last_time);
+	printf ("[%8.8lld] ", time_now - last_time);
     else
-	printf ("[None            ] ");
+	printf ("[None    ] ");
     last_time = time_now;
 
     printf ("%s", buffer);
@@ -52,17 +57,37 @@ static int decode_pertec_command (capture *c, list_t *channels)
     return (irev << 4) | (iwrt << 3) |  (iwfm << 2) | (iedit << 1) | (ierase << 0);
 }
 
+static int parity (int val)
+{
+    int par = 0;
+    int i;
+
+    for (i = 0; i < 8; i++)
+	par = par ^ (val & (1 << i) ? 1 : 0);
+
+    return par;
+}
+
 static int decode_write_data (capture *c, list_t *channels)
 {
     char name[4];
     int i;
     int retval = 0;
+    int bit;
 
     for (i = 0; i < 8; i++)
     {
 	sprintf (name, "iw%d", i);
-	retval |= capture_bit_name (c, name, channels) << i;
+	bit = capture_bit_name (c, name, channels);
+	retval |= bit << i;
     }
+
+#warning "Disabled write parity checking"
+#if 0 // seems to complain a lot? have we got this inverted?
+    bit = capture_bit_name (c, "iwp", channels) ? 1 : 0;
+    if (parity (retval) != bit)
+	printf ("Parity error on write data: 0x%x (par = %d)\n", retval, bit);
+#endif
 
     return retval;
 }
@@ -72,12 +97,18 @@ static int decode_read_data (capture *c, list_t *channels)
     char name[4];
     int i;
     int retval = 0;
+    int bit;
 
     for (i = 0; i < 8; i++)
     {
 	sprintf (name, "ir%d", i);
-	retval |= capture_bit_name (c, name, channels) << i;
+	bit = capture_bit_name (c, name, channels) ? 1 : 0;
+	retval |= bit << i;
     }
+
+    bit = capture_bit_name (c, "irp", channels) ? 1 : 0;
+    if (parity (retval) != bit)
+	printf ("Parity error on read data: 0x%x (par = %d)\n", retval, bit);
 
     return retval;
 }
@@ -117,19 +148,25 @@ struct pin_assignments
     channel_info *irstr;
     channel_info *ilwd;
     channel_info *idby;
+    channel_info *ifby;
+    channel_info *ifad;
+    channel_info *itad0;
+    channel_info *itad1;
+    channel_info *ident;
 };
 
-static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
+static void parse_pertec_cap (capture *c, list_t *channels)
 {
+    static uint64_t last_bad = 0;
+    static capture *prev = NULL;
     static struct pin_assignments pa = {-1};
     static unsigned char buffer[10240];
     static int buffer_pos = 0;
     static int last_word = 0;
     static int writing = 0;
     static int reading = 0;
+    int id;
 
-    if (!prev) // skip first sample
-	return;
     if (pa.init == -1 && c) // work these out once only, to speed things up
     {
 	pa.init = 1;
@@ -139,9 +176,42 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	pa.irstr = capture_channel_details (c, "irstr", channels);
 	pa.ilwd = capture_channel_details (c, "ilwd", channels);
 	pa.idby = capture_channel_details (c, "idby", channels);
+	pa.ifby = capture_channel_details (c, "ifby", channels);
+	pa.ifad = capture_channel_details (c, "ifad", channels);
+	pa.itad0 = capture_channel_details (c, "itad0", channels);
+	pa.itad1 = capture_channel_details (c, "itad1", channels);
+	pa.ident = capture_channel_details (c, "ident", channels);
     }
 
-#warning "Should be looking at ITAD, IFAD to work out if this is for us or not"
+    /* Ignore any transitions that aren't for us */
+    id = capture_bit (c, pa.ifad) << 2 | capture_bit (c, pa.itad0) << 1 | capture_bit (c, pa.itad1);
+
+    if (id != pertec_id) // we don't want ones that aren't for us
+    {
+	last_bad = capture_time (c);
+	return;
+    }
+    else if (capture_time(c) - last_bad < 60 * 1000) // we also want to ignore any samples for 60ns after we're selected, to allow them to wobble
+	return;
+
+    if (!prev) // skip first sample
+    {
+	prev = c;
+	return;
+    }
+
+    if (capture_bit_transition (c, prev, pa.idby, TRANSITION_rising_edge))
+	time_log (c, "idby active\n");
+    if (capture_bit_transition (c, prev, pa.idby, TRANSITION_falling_edge))
+	time_log (c, "idby inactive\n");
+    if (capture_bit_transition (c, prev, pa.ifby, TRANSITION_rising_edge))
+	time_log (c, "ifby active\n");
+    if (capture_bit_transition (c, prev, pa.ifby, TRANSITION_falling_edge))
+	time_log (c, "ifby inactive\n");
+    if (capture_bit_transition (c, prev, pa.ident, TRANSITION_rising_edge))
+	time_log (c, "ident active\n");
+    if (capture_bit_transition (c, prev, pa.ident, TRANSITION_falling_edge))
+	time_log (c, "ident inactive\n");
 
     if (capture_bit_transition (c, prev, pa.igo, TRANSITION_falling_edge))
     {
@@ -193,26 +263,30 @@ static void parse_pertec_cap (capture *c, capture *prev, list_t *channels)
 	reading = 0;
     }
 
-    if (capture_bit_transition (c, prev, pa.ilwd, TRANSITION_rising_edge))
+    if (capture_bit_transition (c, prev, pa.ilwd, TRANSITION_rising_edge) && writing)
+    {
+	time_log (c, "Last word\n");
 	last_word = 1;
+    }
 
-    /* Should have a check here that makes sure IDBY is never high when IFBY is low */
+    if (capture_bit (c, pa.idby) && !capture_bit (c, pa.ifby))
+	printf ("IDBY high, but IFBY low\n");
 
     /* Should have a check here that looks as how ILDP, IDENT & IREW all tie together 
      * (make sure that we do BOT handling properly */
+    prev = c;
 }
 
 static void parse_pertec_bulk_cap (bulk_capture *b, list_t *channels)
 {
     int i;
-    capture *c, *prev = NULL;
+    capture *c;
 
     c = b->data;
 
     for (i = 0; i < b->length / sizeof (capture); i++)
     {
-	parse_pertec_cap (c, prev, channels);
-	prev = c;
+	parse_pertec_cap (c, channels);
 	c++;
     }
 }
@@ -221,8 +295,12 @@ void parse_pertec (list_t *cap, char *filename, list_t *channels)
 {
     list_t *n;
     int i;
+    char idbuf[100];
 
-    printf ("Pertec analysis of file: '%s'\n", filename);
+    if (option_val ("pertecid", idbuf, 100))
+	pertec_id = atoi(idbuf);
+
+    printf ("Pertec analysis of file: '%s', using ID %d\n", filename, pertec_id);
 
     for (n = cap, i = 0; n != NULL; n = n->next, i++)
     {

@@ -36,8 +36,8 @@ uint64_t capture_time (capture *c)
     //t = 0;
     b = ntohl (c->time_bottom);
 
-    // timings are in 1/8th of a nano-second, so change it into micro seconds
-    return (t << 32 | b) / 8000; 
+    // timings are in 1/8th of a nano-second, so change it into nano seconds
+    return (t << 32 | b) / 8;
 }
 
 int dump_capture (bulk_capture *b)
