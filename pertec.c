@@ -132,7 +132,7 @@ static void dump_buffer (char *title, unsigned char *buffer, int len)
     for (i = 0; i < len; i++)
     {
 	if (i % 24 == 0)
-	    printf ("\t%4.4x: ", i);
+	    printf ("  %4.4x: ", i);
 	printf ("%2.2x%s", buffer[i], i % 24 == 23 ? "\n" : " ");
     }
     printf ("\n");
