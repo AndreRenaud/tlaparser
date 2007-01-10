@@ -157,7 +157,8 @@ struct pin_assignments
 
 static void parse_pertec_cap (capture *c, list_t *channels)
 {
-    static uint64_t last_bad = 0;
+    static uint64_t first_good = 0;
+    static int prev_bad = 0;
     static capture *prev = NULL;
     static struct pin_assignments pa = {-1};
     static unsigned char buffer[10240];
@@ -188,10 +189,16 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
     if (id != pertec_id) // we don't want ones that aren't for us
     {
-	last_bad = capture_time (c);
+	prev_bad = 1;
 	return;
     }
-    else if (capture_time(c) - last_bad < 60 * 1000) // we also want to ignore any samples for 60ns after we're selected, to allow them to wobble
+    else if (prev_bad)
+    {
+	prev_bad = 0;
+	first_good = capture_time (c);
+	return;
+    }
+    else if (capture_time(c) - first_good < 60 * 1000) // we also want to ignore any samples for 100ns after we're selected, to allow them to wobble
 	return;
 
     if (!prev) // skip first sample
@@ -209,9 +216,9 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     if (capture_bit_transition (c, prev, pa.ifby, TRANSITION_falling_edge))
 	time_log (c, "ifby inactive\n");
     if (capture_bit_transition (c, prev, pa.ident, TRANSITION_rising_edge))
-	time_log (c, "ident active\n");
+	time_log (c, "ident inctive\n");
     if (capture_bit_transition (c, prev, pa.ident, TRANSITION_falling_edge))
-	time_log (c, "ident inactive\n");
+	time_log (c, "ident active\n");
 
     if (capture_bit_transition (c, prev, pa.igo, TRANSITION_falling_edge))
     {
@@ -238,6 +245,8 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
     if (writing && capture_bit_transition (c, prev, pa.iwstr, TRANSITION_falling_edge))
     {
+	if (buffer_pos == 0)
+	    time_log (c, "First write byte\n");
 	buffer[buffer_pos++] = decode_write_data (c, channels);	
 
 	if (last_word)
@@ -251,8 +260,9 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
     if (reading && capture_bit_transition (c, prev, pa.irstr, TRANSITION_falling_edge))
     {
+	if (buffer_pos == 0)
+	    time_log (c, "First read byte\n");
 	buffer[buffer_pos++] = decode_read_data (c, channels);	
-
     }
 
     if (buffer_pos && capture_bit_transition (c, prev, pa.idby, TRANSITION_falling_edge))
