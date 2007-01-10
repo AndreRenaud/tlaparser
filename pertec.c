@@ -82,12 +82,9 @@ static int decode_write_data (capture *c, list_t *channels)
 	retval |= bit << i;
     }
 
-#warning "Disabled write parity checking"
-#if 0 // seems to complain a lot? have we got this inverted?
     bit = capture_bit_name (c, "iwp", channels) ? 1 : 0;
-    if (parity (retval) != bit)
-	printf ("Parity error on write data: 0x%x (par = %d)\n", retval, bit);
-#endif
+    if (parity (retval) == bit)
+	time_log (c, "Parity error on write data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
 
     return retval;
 }
@@ -107,8 +104,8 @@ static int decode_read_data (capture *c, list_t *channels)
     }
 
     bit = capture_bit_name (c, "irp", channels) ? 1 : 0;
-    if (parity (retval) != bit)
-	printf ("Parity error on read data: 0x%x (par = %d)\n", retval, bit);
+    if (parity (retval) == bit)
+	time_log (c, "Parity error on read data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
 
     return retval;
 }
@@ -235,7 +232,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
     if (reading && writing)
     {
-	printf ("ARGH! SOMEHOW I'M BOTH READING & WRITING\n");
+	time_log (c, "ARGH! SOMEHOW I'M BOTH READING & WRITING\n");
     }
 
     if (capture_bit_transition (c, prev, pa.irew, TRANSITION_falling_edge))
@@ -280,7 +277,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     }
 
     if (capture_bit (c, pa.idby) && !capture_bit (c, pa.ifby))
-	printf ("IDBY high, but IFBY low\n");
+	time_log (c, "IDBY high, but IFBY low\n");
 
     /* Should have a check here that looks as how ILDP, IDENT & IREW all tie together 
      * (make sure that we do BOT handling properly */
