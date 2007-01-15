@@ -150,6 +150,7 @@ struct pin_assignments
     channel_info *itad0;
     channel_info *itad1;
     channel_info *ident;
+    channel_info *ifmk;
 };
 
 static void parse_pertec_cap (capture *c, list_t *channels)
@@ -179,6 +180,13 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	pa.itad0 = capture_channel_details (c, "itad0", channels);
 	pa.itad1 = capture_channel_details (c, "itad1", channels);
 	pa.ident = capture_channel_details (c, "ident", channels);
+	pa.ifmk = capture_channel_details (c, "ifmk", channels);
+    }
+
+    if (!prev) // skip first sample
+    {
+	prev = c;
+	return;
     }
 
     /* Ignore any transitions that aren't for us */
@@ -195,14 +203,8 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	first_good = capture_time (c);
 	return;
     }
-    else if (capture_time(c) - first_good < 60 * 1000) // we also want to ignore any samples for 100ns after we're selected, to allow them to wobble
+    else if (capture_time(c) - first_good < 150 * 1000) // we also want to ignore any samples for 150ns after we're selected, to allow them to wobble
 	return;
-
-    if (!prev) // skip first sample
-    {
-	prev = c;
-	return;
-    }
 
     if (capture_bit_transition (c, prev, pa.idby, TRANSITION_rising_edge))
 	time_log (c, "idby active\n");
@@ -213,11 +215,19 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     if (capture_bit_transition (c, prev, pa.ifby, TRANSITION_falling_edge))
 	time_log (c, "ifby inactive\n");
     if (capture_bit_transition (c, prev, pa.ident, TRANSITION_rising_edge))
-	time_log (c, "ident inactive\n");
-    if (capture_bit_transition (c, prev, pa.ident, TRANSITION_falling_edge))
 	time_log (c, "ident active\n");
+    if (capture_bit_transition (c, prev, pa.ident, TRANSITION_falling_edge))
+	time_log (c, "ident inactive\n");
 
-    if (capture_bit_transition (c, prev, pa.igo, TRANSITION_falling_edge))
+    if (capture_bit (c, pa.idby)) /* ifmk only valid when idby is active */
+    {
+	if (capture_bit_transition (c, prev, pa.ifmk, TRANSITION_rising_edge))
+	    time_log (c, "ifmk active\n");
+	if (capture_bit_transition (c, prev, pa.ifmk, TRANSITION_falling_edge))
+	    time_log (c, "ifmk inactive\n");
+    }
+
+    if (capture_bit_transition (c, prev, pa.igo, TRANSITION_rising_edge))
     {
 	int cmd = decode_pertec_command (c, channels);
 	time_log (c, "igo: %x %s\n", cmd, pertec_command_name (cmd));

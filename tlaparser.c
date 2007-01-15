@@ -46,6 +46,8 @@ static list_t *load_capture (char *filename)
 {
     list_t *cap;
     off_t len;
+    char *buf;
+
     
     printf ("About to load %s\n", filename);
 
@@ -59,10 +61,14 @@ static list_t *load_capture (char *filename)
 	fprintf (stderr, "File too large: %s - increase MAX_DATA_LEN\n", filename);
 	return NULL;
     }
+    buf = malloc (1 * 1024 * 1024);
+
+    setvbuf (yyin, buf, _IOFBF, 1 * 1024 * 1024);
 
     yyparse (NULL);
     cap = final_capture;
     fclose (yyin);
+    free (buf);
 
     return cap;
 }
