@@ -213,7 +213,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     if (capture_bit_transition (c, prev, pa.ifby, TRANSITION_falling_edge))
 	time_log (c, "ifby inactive\n");
     if (capture_bit_transition (c, prev, pa.ident, TRANSITION_rising_edge))
-	time_log (c, "ident inctive\n");
+	time_log (c, "ident inactive\n");
     if (capture_bit_transition (c, prev, pa.ident, TRANSITION_falling_edge))
 	time_log (c, "ident active\n");
 
