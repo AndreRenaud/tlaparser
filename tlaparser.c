@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -52,6 +53,11 @@ static list_t *load_capture (char *filename)
     printf ("About to load %s\n", filename);
 
     yyin = fopen (filename, "r");
+    if (!yyin)
+    {
+	fprintf (stderr, "Unable to open '%s': %s\n", filename, strerror (errno));
+	return NULL;
+    }
     fseeko (yyin, 0, SEEK_END);
     len = ftello (yyin);
     fseeko (yyin, 0, SEEK_SET);

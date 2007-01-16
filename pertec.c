@@ -203,28 +203,22 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	first_good = capture_time (c);
 	return;
     }
-    else if (capture_time(c) - first_good < 150 * 1000) // we also want to ignore any samples for 150ns after we're selected, to allow them to wobble
+    else if (capture_time(c) - first_good < 60 * 1000) // we also want to ignore any samples for 150ns after we're selected, to allow them to wobble
 	return;
 
-    if (capture_bit_transition (c, prev, pa.idby, TRANSITION_rising_edge))
-	time_log (c, "idby active\n");
-    if (capture_bit_transition (c, prev, pa.idby, TRANSITION_falling_edge))
-	time_log (c, "idby inactive\n");
-    if (capture_bit_transition (c, prev, pa.ifby, TRANSITION_rising_edge))
-	time_log (c, "ifby active\n");
-    if (capture_bit_transition (c, prev, pa.ifby, TRANSITION_falling_edge))
-	time_log (c, "ifby inactive\n");
-    if (capture_bit_transition (c, prev, pa.ident, TRANSITION_rising_edge))
-	time_log (c, "ident active\n");
-    if (capture_bit_transition (c, prev, pa.ident, TRANSITION_falling_edge))
-	time_log (c, "ident inactive\n");
+    if (capture_bit (c, pa.idby) != capture_bit (prev, pa.idby))
+	time_log (c, "idby %sactive\n", capture_bit (c,pa.idby) ? "": "in");
+
+    if (capture_bit (c, pa.ifby) != capture_bit (prev, pa.ifby))
+	time_log (c, "ifby %sactive\n", capture_bit (c,pa.ifby) ? "": "in");
+
+    if (capture_bit (c, pa.ident) != capture_bit (prev, pa.ident))
+	time_log (c, "ident %sactive\n", capture_bit (c,pa.ident) ? "": "in");
 
     if (capture_bit (c, pa.idby)) /* ifmk only valid when idby is active */
     {
-	if (capture_bit_transition (c, prev, pa.ifmk, TRANSITION_rising_edge))
-	    time_log (c, "ifmk active\n");
-	if (capture_bit_transition (c, prev, pa.ifmk, TRANSITION_falling_edge))
-	    time_log (c, "ifmk inactive\n");
+	if (capture_bit (c, pa.ifmk) != capture_bit (prev, pa.ifmk))
+	    time_log (c, "ifmk %sactive\n", capture_bit (c,pa.ifmk) ? "": "in");
     }
 
     if (capture_bit_transition (c, prev, pa.igo, TRANSITION_rising_edge))
