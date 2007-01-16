@@ -93,6 +93,8 @@ int option_val (char *name, char *buffer, int buff_len)
 
     for (s = options; s != NULL; s = strchr (s, ','))
     {
+	if (*s == ',')
+	    s++;
 	if (strncmp (s, name, namelen) == 0 &&
   	    strlen (s) >= namelen &&
 	    (s[namelen] == '=' || s[namelen] == ',' || s[namelen] == '\0'))

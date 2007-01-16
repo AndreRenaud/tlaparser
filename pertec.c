@@ -8,6 +8,7 @@
 #include "pertec.h"
 
 static int pertec_id = 0; /* Which pertec id (combination of IFAD << 2 | ITAD0 << 1 | ITAD1 << 0) are we? */
+static int ignore_parity = 0; /* Do we ignore parity errors? */
 
 enum
 {
@@ -63,7 +64,7 @@ static int parity (int val)
     int i;
 
     for (i = 0; i < 8; i++)
-	par = par ^ (val & (1 << i) ? 1 : 0);
+	par = par ^ (val & (1 << i) ? 0 : 1);
 
     return par;
 }
@@ -82,9 +83,12 @@ static int decode_write_data (capture *c, list_t *channels)
 	retval |= bit << i;
     }
 
-    bit = capture_bit_name (c, "iwp", channels) ? 1 : 0;
-    if (parity (retval) == bit)
-	time_log (c, "Parity error on write data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
+    if (!ignore_parity)
+    {
+	bit = capture_bit_name (c, "iwp", channels) ? 1 : 0;
+	if (parity (retval) != bit)
+	    time_log (c, "Parity error on write data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
+    }
 
     return retval;
 }
@@ -103,9 +107,12 @@ static int decode_read_data (capture *c, list_t *channels)
 	retval |= bit << i;
     }
 
-    bit = capture_bit_name (c, "irp", channels) ? 1 : 0;
-    if (parity (retval) == bit)
-	time_log (c, "Parity error on read data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
+    if (!ignore_parity)
+    {
+	bit = capture_bit_name (c, "irp", channels) ? 1 : 0;
+	if (parity (retval) != bit)
+	    time_log (c, "Parity error on read data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
+    }
 
     return retval;
 }
@@ -203,7 +210,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	first_good = capture_time (c);
 	return;
     }
-    else if (capture_time(c) - first_good < 60 * 1000) // we also want to ignore any samples for 150ns after we're selected, to allow them to wobble
+    else if (capture_time(c) - first_good < 150 * 1000) // we also want to ignore any samples for 150ns after we're selected, to allow them to wobble
 	return;
 
     if (capture_bit (c, pa.idby) != capture_bit (prev, pa.idby))
@@ -310,6 +317,7 @@ void parse_pertec (list_t *cap, char *filename, list_t *channels)
 
     if (option_val ("pertecid", idbuf, 100))
 	pertec_id = atoi(idbuf);
+    ignore_parity = option_set ("ignore_parity");
 
     printf ("Pertec analysis of file: '%s', using ID %d\n", filename, pertec_id);
 
