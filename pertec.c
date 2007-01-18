@@ -109,7 +109,7 @@ static int decode_read_data (capture *c, list_t *channels)
 
     if (!ignore_parity)
     {
-	bit = capture_bit_name (c, "irp", channels) ? 1 : 0;
+	bit = capture_bit_name (c, "irp", channels) ? 0 : 1;
 	if (parity (retval) != bit)
 	    time_log (c, "Parity error on read data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
     }
@@ -158,6 +158,7 @@ struct pin_assignments
     channel_info *itad1;
     channel_info *ident;
     channel_info *ifmk;
+    channel_info *ildp;
 };
 
 static void parse_pertec_cap (capture *c, list_t *channels)
@@ -188,6 +189,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	pa.itad1 = capture_channel_details (c, "itad1", channels);
 	pa.ident = capture_channel_details (c, "ident", channels);
 	pa.ifmk = capture_channel_details (c, "ifmk", channels);
+	pa.ildp = capture_channel_details (c, "ildp", channels);
     }
 
     if (!prev) // skip first sample
@@ -210,7 +212,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	first_good = capture_time (c);
 	return;
     }
-    else if (capture_time(c) - first_good < 150 * 1000) // we also want to ignore any samples for 150ns after we're selected, to allow them to wobble
+    else if (capture_time(c) - first_good < 60 * 1000) // we also want to ignore any samples for 150ns after we're selected, to allow them to wobble
 	return;
 
     if (capture_bit (c, pa.idby) != capture_bit (prev, pa.idby))
@@ -221,6 +223,9 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
     if (capture_bit (c, pa.ident) != capture_bit (prev, pa.ident))
 	time_log (c, "ident %sactive\n", capture_bit (c,pa.ident) ? "": "in");
+
+    if (capture_bit (c, pa.ildp) != capture_bit (prev, pa.ildp))
+	time_log (c, "ildp %sactive\n", capture_bit (c,pa.ildp) ? "": "in");
 
     if (capture_bit (c, pa.idby)) /* ifmk only valid when idby is active */
     {
