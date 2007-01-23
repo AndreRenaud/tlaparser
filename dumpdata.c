@@ -87,7 +87,7 @@ int capture_bit (capture *cap, channel_info *c)
     int retval;
     if (!c || c->probe < 0 || c->probe >= CAPTURE_DATA_BYTES || c->index < 0 || c->index >= 8)
     {
-	printf ("Invalid probe: %d index: %d\n", 
+	printf ("Invalid probe: %d index: %d\n",
 		c ? c->probe : -1 , c ? c->index : -1);
 	abort ();
     }
@@ -155,7 +155,7 @@ int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t
 /* Works out where in the binary blob the channel info is found
  * Channels are ordered as specified in the file (So the order we call build_channel matters)
  * Probes are also paired, so e3 & e2 are always together, so are a1 & a0. If a1 is entirely unused,
- * it will not appear in the tla file, but we must still account for it (that is the bit below looking 
+ * it will not appear in the tla file, but we must still account for it (that is the bit below looking
  * for 3 & 1, checking that we haven't skipped a probe
  * This is all vaguely confusing
  */
@@ -181,7 +181,7 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
 	strncpy (retval->name, name, 20);
     retval->name[19] = '\0';
 
-    if (strncmp (probe_name, last_probe, 2) != 0)
+    if (strncasecmp (probe_name, last_probe, 2) != 0)
     {
 	if (probe != -1 && last_probe[0] != probe_name[0] && probe_name[1] != '3' && probe_name[1] != '1') // we've dropped half of a probe pair
 	    probe++;

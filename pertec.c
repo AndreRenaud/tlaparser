@@ -9,6 +9,7 @@
 
 static int pertec_id = 0; /* Which pertec id (combination of IFAD << 2 | ITAD0 << 1 | ITAD1 << 0) are we? */
 static int ignore_parity = 0; /* Do we ignore parity errors? */
+static int ignore_id = 0; /* Do we ignore ID selection? */
 
 enum
 {
@@ -41,7 +42,6 @@ static int time_log (capture *c, char *msg, ...)
     printf ("%s", buffer);
 
     return 0;
-
 }
 
 static int decode_pertec_command (capture *c, list_t *channels)
@@ -198,15 +198,19 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	return;
     }
 
-    /* Ignore any transitions that aren't for us */
-    id = capture_bit (c, pa.ifad) << 2 | capture_bit (c, pa.itad0) << 1 | capture_bit (c, pa.itad1);
-
-    if (id != pertec_id) // we don't want ones that aren't for us
+    if (!ignore_id)
     {
-	prev_bad = 1;
-	return;
+	/* Ignore any transitions that aren't for us */
+	id = capture_bit (c, pa.ifad) << 2 | capture_bit (c, pa.itad0) << 1 | capture_bit (c, pa.itad1);
+
+	if (id != pertec_id) // we don't want ones that aren't for us
+	{
+	    prev_bad = 1;
+	    return;
+	}
     }
-    else if (prev_bad)
+
+    if (prev_bad || first_good == 0)
     {
 	prev_bad = 0;
 	first_good = capture_time (c);
@@ -240,6 +244,10 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	buffer_pos = 0;
 	last_word = 0;
 
+	if (reading || writing)
+	    time_log (c, "igo while outstanding read/write");
+
+
 	if (cmd == CMD_READ_FWD)
 	    reading = 1;
 	else if (cmd == CMD_WRITE)
@@ -260,7 +268,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     {
 	if (buffer_pos == 0)
 	    time_log (c, "First write byte\n");
-	buffer[buffer_pos++] = decode_write_data (c, channels);	
+	buffer[buffer_pos++] = decode_write_data (c, channels);
 
 	if (last_word)
 	{
@@ -275,7 +283,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     {
 	if (buffer_pos == 0)
 	    time_log (c, "First read byte\n");
-	buffer[buffer_pos++] = decode_read_data (c, channels);	
+	buffer[buffer_pos++] = decode_read_data (c, channels);
     }
 
     if (buffer_pos && capture_bit_transition (c, prev, pa.idby, TRANSITION_falling_edge))
@@ -295,7 +303,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     if (capture_bit (c, pa.idby) && !capture_bit (c, pa.ifby))
 	time_log (c, "IDBY high, but IFBY low\n");
 
-    /* Should have a check here that looks as how ILDP, IDENT & IREW all tie together 
+    /* Should have a check here that looks as how ILDP, IDENT & IREW all tie together
      * (make sure that we do BOT handling properly */
     prev = c;
 }
@@ -322,6 +330,7 @@ void parse_pertec (list_t *cap, char *filename, list_t *channels)
 
     if (option_val ("pertecid", idbuf, 100))
 	pertec_id = atoi(idbuf);
+    ignore_id =  option_set ("ignoreid");
     ignore_parity = option_set ("ignore_parity");
 
     printf ("Pertec analysis of file: '%s', using ID %d\n", filename, pertec_id);

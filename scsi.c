@@ -136,7 +136,7 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 	case 2: // COMMAND
 	{
 	    int cmd = buf[0];
-	    printf ("\n\t%s", scsi_command_name (buf[0]));
+	    printf ("\n\t%s", scsi_command_name (cmd));
 	    switch (cmd)
 	    {
 		case 0x08: // read
