@@ -172,7 +172,6 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     static int last_word = 0;
     static int writing = 0;
     static int reading = 0;
-    int id;
 
     if (pa.init == -1 && c) // work these out once only, to speed things up
     {
@@ -201,7 +200,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     if (!ignore_id)
     {
 	/* Ignore any transitions that aren't for us */
-	id = capture_bit (c, pa.ifad) << 2 | capture_bit (c, pa.itad0) << 1 | capture_bit (c, pa.itad1);
+	int id = capture_bit (c, pa.ifad) << 2 | capture_bit (c, pa.itad0) << 1 | capture_bit (c, pa.itad1);
 
 	if (id != pertec_id) // we don't want ones that aren't for us
 	{
