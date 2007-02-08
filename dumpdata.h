@@ -100,5 +100,7 @@ int capture_compare (list_t *data1, list_t *data2, char *file1, char *file2);
 stream_info_t *build_stream_info (list_t *data, char *filename);
 void compare_streams (stream_info_t *s1, stream_info_t *s2);
 
+int time_log (capture *c, char *msg, ...);
+
 #endif
 

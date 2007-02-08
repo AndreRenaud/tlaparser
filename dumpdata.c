@@ -5,6 +5,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include <stdarg.h>
 
 #include "dumpdata.h"
 
@@ -194,6 +195,15 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     retval->probe = probe;
     retval->index = atoi (&probe_name[3]);
 
+#if 1
+#warning "Overriding channel probes"
+    if (strncmp (retval->probe_name, "A2", 2) == 0)
+	retval->probe = 5;
+    else if (strncmp (retval->probe_name, "A1", 2) == 0)
+	retval->probe = 8;
+    else if (strncmp (retval->probe_name, "A0", 2) == 0)
+	retval->probe = 9;
+#endif
 #if 0
     printf ("Added channel %s %s - (%d, %d) %s\n",
 	    retval->probe_name, retval->name, retval->probe, retval->index, retval->inverted ? "Inverted" : "");
@@ -220,4 +230,29 @@ bulk_capture *build_dump (unsigned char *data, int length)
    return retval;
 }
 
+
+int time_log (capture *c, char *msg, ...)
+{
+    char buffer[1024];
+    va_list ap;
+    //uint64_t time_now = capture_time (c); // we want it in nano-seconds
+    uint64_t time_now = capture_time (c) / 1000; // we want it in useconds
+    static uint64_t last_time = -1;
+
+    va_start (ap, msg);
+    vsnprintf (buffer, 1024, msg, ap);
+    va_end (ap);
+    buffer[1023] = '\0';
+
+    printf ("[%10.10lld] ", time_now);
+    if (last_time != -1)
+	printf ("[%8.8lld] ", time_now - last_time);
+    else
+	printf ("[None    ] ");
+    last_time = time_now;
+
+    printf ("%s", buffer);
+
+    return 0;
+}
 

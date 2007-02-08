@@ -88,19 +88,28 @@ static char ebcdic_to_ascii (unsigned char c)
 }
 #endif
 
-static void dump_buffer (unsigned char *buffer, int len, int length_so_far)
+static void dump_buffer (unsigned char *buffer, int len)
 {
-    int i;
+    int i, j;
 
-    printf ("\t");
-    for (i = 0; i < len; i++)
+    if (!len)
+	return;
+
+    printf ("Data length: %d\n", len);
+#define LINELEN 16
+    for (i = 0; i < len; i+=LINELEN)
     {
-	printf ("%c", printable_char (buffer[i]));
-	//printf ("%c", printable_char (ebcdic_to_ascii (buffer[i])));
-    }
+	int this_len = min(LINELEN, len - i);
+	printf ("\t");
+	for (j = 0; j < this_len; j++)
+	    printf ("%2.2x ", buffer[i + j]);
 
-    if (length_so_far)
-	printf ("\n\tLength: %d", length_so_far);
+	for (j = 0; j < this_len; j++)
+	    printf ("%c", printable_char (buffer[i + j]));
+	printf ("\n");
+    }
+    printf ("\n");
+
 }
 
 static unsigned char flip (unsigned char ch)
@@ -127,7 +136,7 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 	    switch (last_phase_command) // work out what hte last command is, since this is its response data
 	    {
 		case 0x12: // inquiry response data
-		    printf ("\n\tInquiry response data");
+		    printf ("\tInquiry response data\n");
 		    break;
 	    }
 	    break;
@@ -136,7 +145,7 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 	case 2: // COMMAND
 	{
 	    int cmd = buf[0];
-	    printf ("\n\t%s", scsi_command_name (cmd));
+	    printf ("\t%s\n", scsi_command_name (cmd));
 	    switch (cmd)
 	    {
 		case 0x08: // read
@@ -149,37 +158,62 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 	    break;
 	}
 
+	case 6: // message out
+	{
+	    int cmd = buf[0];
+	    if (cmd & 0x80)
+		printf ("\tIdentify\n");
+	    else
+		printf ("\tUnknown command: %d\n", cmd);
+	    break;
+	}
+
 	default:
 	    break;
     }
 }
 
-static int get_data (capture *c)
+static int get_data (capture *c, list_t *channels)
 {
+    int retval = 0;
+    char name[10];
+    int i;
+    int bit;
+
+    for (i = 0; i < 8; i++)
+    {
+	sprintf (name, "db%d", i);
+	bit = capture_bit_name (c, name, channels) ? 0 : 1; // invert the logic
+	retval |= bit << i;
+    }
+
+    //printf ("get_data: %d\n", retval);
+
+    return retval;
+#if 0
 #warning "Data probe hard coded to e0"
     return (~flip (c->data[3])) & 0xff;
+#endif
 }
 
-static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
+static void parse_scsi_cap (capture *c, list_t *channels)
 {
+    static capture *prev = NULL;
     static int last_phase = -1;
     static unsigned char buffer[20];
     static int buffer_len = 0;
-    static int last_cmd_len = 0;
     static int current_device = -1;
-    static uint64_t last_time = 0;
     static int last_phase_command = -1;
 
     if (!prev)
-	return;
-  
-    // nSEL went low -> high, device selection 
-    if (!capture_bit_name (prev, "nSEL", channels) &&
-	capture_bit_name (c, "nSEL", channels))
+	goto out;
+ 
+    // SEL went low -> high, device selection 
+    if (capture_bit_transition_name (c, prev, "nSEL", channels, TRANSITION_high_to_low))
     {
-	int ch = get_data (c);
+	int ch = get_data (c, channels);
 	if (ch != current_device && !option_set ("device1") && !option_set("device2"))
-	    printf ("\nSelected device: 0x%2.2x", ch);
+	    time_log (c, "Selected device: 0x%2.2x\n", ch);
 	current_device = ch;
     }
 
@@ -189,69 +223,58 @@ static void parse_scsi_cap (capture *c, capture *prev, list_t *channels)
     if (option_set ("device2") && current_device != 2)
 	return;
 
-    // nbsy is low, and nack goes from high to low
+    // bsy is low, and nack goes from high to low
     if (!capture_bit_name (c, "nBSY", channels) && 
-	!capture_bit_name (c, "nACK", channels) &&
-	capture_bit_name (prev, "nACK", channels))
+	capture_bit_transition_name (c, prev, "nACK", channels, TRANSITION_low_to_high))
     {
 	int phase = 0;
 	int ch;
 
+
 	phase |= capture_bit_name (c, "nMSG", channels) << 2;
-	phase |= capture_bit_name (c, "nC_D", channels) << 1;
+	phase |= capture_bit_name (c, "nCD", channels) << 1;
 	phase |= capture_bit_name (c, "nIO", channels) << 0;
 	phase = (~phase) & 0x7; // invert, since signals are negative logic
 
 	if (phase != last_phase)
 	{
-	    dump_buffer (buffer, buffer_len, last_cmd_len);
 	    decode_scsi_command (last_phase, buffer, last_phase_command);
+	    dump_buffer (buffer, buffer_len);
 	    buffer_len = 0;
-	    last_cmd_len = 0;
-	    printf ("\n%llu %s\n\t", capture_time (c) / 1000 - last_time, scsi_phases[phase]);
-	    last_time = capture_time (c) / 1000;
+	    time_log (c, "Phase: %s\n", scsi_phases[phase]);
 	}
-	ch = get_data (c);
-	if (phase == 2 && last_cmd_len == 0) // COMMAND phase, first byte, so record the command
+	ch = get_data (c, channels);
+	if (phase == 2 && buffer_len == 0) // COMMAND phase, first byte, so record the command
 	    last_phase_command = ch;
-	last_cmd_len++;
 
-	printf ("%2.2x ", ch);
 	buffer[buffer_len] = ch;
 	buffer_len++;
-	if (buffer_len == 16)
-	{
-	    dump_buffer (buffer, buffer_len, 0);
-	    buffer_len = 0;
-	    printf ("\n\t");
-	}
 	last_phase = phase;
     }
    
-    // nbsy went high, end of transaction 
+    // bsy went high, end of transaction 
     if (capture_bit_name (c, "nBSY", channels) && !capture_bit_name (prev, "nBSY", channels))
     {
-	dump_buffer (buffer, buffer_len, last_cmd_len);
 	decode_scsi_command (last_phase, buffer, last_phase_command);
-	last_cmd_len = 0;
+	dump_buffer (buffer, buffer_len);
 	buffer_len = 0;
-	printf ("\n-----------");
 	last_phase = -1;
     }
+
+out:
+    prev = c;
 }
 
 static void parse_scsi_bulk_cap (bulk_capture *b, list_t *channels)
 {
     int i;
-    capture *c, *prev = NULL;
+    capture *c;
 
-    //c = (capture *)(b+1);//(char *)b+sizeof (bulk_capture);
     c = b->data;
 
     for (i = 0; i < b->length / sizeof (capture); i++)
     {
-	parse_scsi_cap (c, prev, channels);
-	prev = c;
+	parse_scsi_cap (c, channels);
 	c++;
     }
 }
@@ -261,11 +284,11 @@ void parse_scsi (list_t *cap, char *filename, list_t *channels)
     list_t *n;
     int i;
 
-    printf ("SCSI analysis of file: '%s'", filename);
+    printf ("SCSI analysis of file: '%s'\n", filename);
 
     for (n = cap, i = 0; n != NULL; n = n->next, i++)
     {
-	printf ("\nParsing capture block %d", i);
+	printf ("Parsing capture block %d\n", i);
 	parse_scsi_bulk_cap (n->data, channels);
     }
 

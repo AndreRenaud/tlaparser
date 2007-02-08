@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -18,31 +17,6 @@ enum
     CMD_WRITE = 0x08,
     CMD_WRITE_FM = 0x0c,
 };
-
-static int time_log (capture *c, char *msg, ...)
-{
-    char buffer[1024];
-    va_list ap;
-    //uint64_t time_now = capture_time (c); // we want it in nano-seconds
-    uint64_t time_now = capture_time (c) / 1000; // we want it in useconds
-    static uint64_t last_time = -1;
-
-    va_start (ap, msg);
-    vsnprintf (buffer, 1024, msg, ap);
-    va_end (ap);
-    buffer[1023] = '\0';
-
-    printf ("[%10.10lld] ", time_now);
-    if (last_time != -1)
-	printf ("[%8.8lld] ", time_now - last_time);
-    else
-	printf ("[None    ] ");
-    last_time = time_now;
-
-    printf ("%s", buffer);
-
-    return 0;
-}
 
 static int decode_pertec_command (capture *c, list_t *channels)
 {
