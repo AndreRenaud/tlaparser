@@ -173,12 +173,27 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
     }
 }
 
+
+static int parity (int val)
+{
+    int par = 0;
+    int i;
+
+    for (i = 0; i < 8; i++)
+	par = par ^ (val & (1 << i) ? 0 : 1);
+
+    return par;
+}
+
+
+
 static int get_data (capture *c, list_t *channels)
 {
     int retval = 0;
     char name[10];
     int i;
     int bit;
+    int par;
 
     for (i = 0; i < 8; i++)
     {
@@ -186,6 +201,11 @@ static int get_data (capture *c, list_t *channels)
 	bit = capture_bit_name (c, name, channels) ? 0 : 1; // invert the logic
 	retval |= bit << i;
     }
+
+    par = capture_bit_name (c, "parity", channels);
+
+    if (par != parity (retval))
+	time_log (c, "parity error: 0x%x (par = %d, not %d)\n", retval, par, parity (retval));
 
     //printf ("get_data: %d\n", retval);
 
@@ -225,7 +245,7 @@ static void parse_scsi_cap (capture *c, list_t *channels)
 
     // bsy is low, and nack goes from high to low
     if (!capture_bit_name (c, "nBSY", channels) && 
-	capture_bit_transition_name (c, prev, "nACK", channels, TRANSITION_low_to_high))
+	capture_bit_transition_name (c, prev, "nACK", channels, TRANSITION_high_to_low))
     {
 	int phase = 0;
 	int ch;
