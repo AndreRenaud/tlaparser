@@ -78,6 +78,7 @@ struct pin_assignments
     int init;
 
     channel_info *cs;
+    channel_info *irq;
     channel_info *read;
     channel_info *write;
 };
@@ -90,6 +91,7 @@ static void parse_8250_cap (capture *c, list_t *channels)
     if (pa.init == -1 && c) // work these out once only, to speed things up
     {
 	pa.init = 1;
+	pa.irq = capture_channel_details (c, "quart0_int", channels);
 	pa.cs = capture_channel_details (c, "quart0_cs_n", channels);
 	pa.write = capture_channel_details (c, "x_wrn_1", channels);
 	pa.read = capture_channel_details (c, "x_rdn_1", channels);
@@ -105,6 +107,10 @@ static void parse_8250_cap (capture *c, list_t *channels)
     if (capture_bit (c, pa.cs) != capture_bit (prev, pa.cs))
 	time_log (c, "cs changed: %d\n", capture_bit (c, pa.cs));
 #endif
+
+
+    if (capture_bit (c, pa.irq) != capture_bit (prev, pa.irq))
+	time_log (c, "Interrupt %sasserted\n", capture_bit (c, pa.irq) ? "" : "de");
 
 #if 1
     int read = 0;
