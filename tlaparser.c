@@ -16,6 +16,9 @@
 #ifdef PARSE_PERTEC
 #include "pertec.h"
 #endif
+#ifdef PARSE_8250
+#include "8250.h"
+#endif
 
 extern FILE *yyin;
 extern int yyparse (void *YYPARSE_PARAM);
@@ -30,6 +33,7 @@ static void usage (char *prog)
 		     "\t-d	    : Dump file contents\n"
 		     "\t-l	    : Dump channel names\n"
 		     "\t-c	    : Compare two files\n"
+		     "\t-b          : Dump changing bits\n"
 #ifdef PARSE_SCSI
 		     "\t-s	    : SCSI check\n"
 #endif
@@ -38,6 +42,9 @@ static void usage (char *prog)
 #endif
 #ifdef PARSE_PERTEC
 		     "\t-p	    : pertec check\n"
+#endif
+#ifdef PARSE_8250
+		     "\t-8          : 8250 check\n"
 #endif
 		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n"
 	    );
@@ -140,7 +147,7 @@ int option_val (char *name, char *buffer, int buff_len)
 int main (int argc, char *argv[])
 {
     char *file1 = NULL, *file2 = NULL;
-    int dump = 0, compare = 0, list_channels = 0;
+    int dump = 0, compare = 0, list_channels = 0, changing = 0;
 #ifdef PARSE_SCSI
     int scsi = 0;
 #endif
@@ -150,11 +157,14 @@ int main (int argc, char *argv[])
 #ifdef PARSE_PERTEC
     int pertec = 0;
 #endif
+#ifdef PARSE_8250
+    int p8250 = 0;
+#endif
     list_t *cap1 = NULL, *cap2 = NULL;
 
     while (1)
     {
-	int o = getopt (argc, argv, "1:2:dlco:"
+	int o = getopt (argc, argv, "1:2:dblco:"
 #ifdef PARSE_SCSI
 		"s"
 #endif
@@ -164,6 +174,9 @@ int main (int argc, char *argv[])
 #ifdef PARSE_PERTEC
 		"p"
 #endif
+#ifdef PARSE_8250
+		"8"
+#endif
 		);
 	if (o == -1)
 	    break;
@@ -172,10 +185,14 @@ int main (int argc, char *argv[])
 	    case '1': file1 = optarg; break;
 	    case '2': file2 = optarg; break;
 	    case 'd': dump = 1; break;
+	    case 'b': changing = 1; break;
 	    case 'l': list_channels = 1; break;
 	    case 'c': compare = 1; break;
 #ifdef PARSE_PERTEC
 	    case 'p': pertec = 1; break;
+#endif
+#ifdef PARSE_8250
+	    case '8': p8250 = 1; break;
 #endif
 #ifdef PARSE_SCSI
 	    case 's': scsi = 1; break;
@@ -222,6 +239,12 @@ int main (int argc, char *argv[])
     if (list_channels)
 	dump_channel_list (final_channels);
 
+    if (changing)
+	if (cap1)
+	    dump_changing_channels (cap1, file1, final_channels);
+	if (cap2)
+	    dump_changing_channels (cap2, file2, final_channels);
+
     if (dump)
     {
 	if (cap1)
@@ -252,6 +275,12 @@ int main (int argc, char *argv[])
     if (pertec)
 	if (cap1)
 	    parse_pertec (cap1, file1, final_channels);
+#endif
+
+#ifdef PARSE_8250
+    if (p8250)
+	if (cap1)
+	    parse_8250 (cap1, file1, final_channels);
 #endif
 
     return 0;

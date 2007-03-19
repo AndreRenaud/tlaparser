@@ -158,8 +158,8 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	pa.idby = capture_channel_details (c, "idby", channels);
 	pa.ifby = capture_channel_details (c, "ifby", channels);
 	pa.ifad = capture_channel_details (c, "ifad", channels);
-	pa.itad0 = capture_channel_details (c, "itad0", channels);
-	pa.itad1 = capture_channel_details (c, "itad1", channels);
+	pa.itad0 = capture_channel_details (c, "itad<0>", channels);
+	pa.itad1 = capture_channel_details (c, "itad<1>", channels);
 	pa.ident = capture_channel_details (c, "ident", channels);
 	pa.ifmk = capture_channel_details (c, "ifmk", channels);
 	pa.ildp = capture_channel_details (c, "ildp", channels);

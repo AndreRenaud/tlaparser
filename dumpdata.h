@@ -72,6 +72,7 @@ typedef struct
 int dump_capture (bulk_capture *c);
 void dump_capture_list (list_t *capture, char *name, list_t *channels);
 void dump_channel_list (list_t *channels);
+void dump_changing_channels (list_t *cap, char *name, list_t *channels);
 
 /* Returns the channel with name 'channel_name'
  * Useful to speed things up so we don't continually do the same searches
@@ -92,7 +93,7 @@ int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t
 /* Returns the time of the sample in nano seconds */
 uint64_t capture_time (capture *c);
 
-bulk_capture *build_dump (unsigned char *data, int length);
+bulk_capture *build_dump (void *data, int length);
 channel_info *build_channel (char *probe, char *name, int inverted);
 
 int capture_compare (list_t *data1, list_t *data2, char *file1, char *file2);

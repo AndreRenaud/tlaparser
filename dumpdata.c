@@ -78,9 +78,55 @@ void dump_capture_list (list_t *cap, char *name, list_t *channels)
 
     for (n = cap; n != NULL; n = n->next)
     {
+	int i;
 	printf ("Capture item: %p\n", n);
+	printf ("time       ");
+	for (i = 0; i < CAPTURE_DATA_BYTES; i++)
+	    printf ("%2.2d ", i);
+	printf ("\n");
 	dump_capture (n->data);
     }
+}
+
+void dump_changing_channels (list_t *cap, char *name, list_t *channels)
+{
+    list_t *n;
+    uint8_t changes[CAPTURE_DATA_BYTES];
+    int b;
+    for (b = 0; b < CAPTURE_DATA_BYTES; b++)
+	changes[b] = 0;
+
+    printf ("Changing channels on '%s'\n", name);
+
+    for (n = cap; n != NULL; n = n->next)
+    {
+	int i;
+	bulk_capture *bc = n->data;
+	capture *c, *prev = NULL;
+
+	c = bc->data;
+
+	//printf ("Capture Group: %p\n", b);
+	for (i = 0; i < bc->length / sizeof (capture); i++)
+	{
+	    if (prev)
+	    {
+		for (b = 0; b < CAPTURE_DATA_BYTES; b++)
+		{
+		    changes[b] |= c->data[b] ^ prev->data[b];
+		}
+	    }
+
+	    prev = c;
+	    c++;
+	}
+
+    }
+    printf ("Changed bits: ");
+    for (b = 0; b < CAPTURE_DATA_BYTES; b++)
+	printf ("0x%2.2x ", changes[b]);
+    printf ("\n");
+
 }
 
 int capture_bit (capture *cap, channel_info *c)
@@ -163,16 +209,14 @@ int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t
 channel_info *build_channel (char *probe_name, char *name, int inverted)
 {
     channel_info *retval;
-    static int probe = -1; // so that we ++ to 0
-    static char last_probe[10] = "\0";
-
+    // they seem to have leading & trailing $ signs on them, so chop them off if they're there
     retval = malloc (sizeof (channel_info));
+
     strncpy (retval->probe_name, probe_name, 20);
     retval->probe_name[19] = '\0';
 
     retval->inverted = inverted;
 
-    // they seem to have leading & trailing $ signs on them, so chop them off if they're there
     if (name[0] == '$' && name[strlen(name) - 1] == '$')
     {
 	strncpy (retval->name, &name[1], strlen(name) - 2);
@@ -181,6 +225,13 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     else
 	strncpy (retval->name, name, 20);
     retval->name[19] = '\0';
+
+    retval->index = atoi (&probe_name[3]);
+
+#if 0
+#warning "Using vaguelly magic packed probe assignment - almost definitely wrong"
+    static int probe = -1; // so that we ++ to 0
+    static char last_probe[10] = "\0";
 
     if (strncasecmp (probe_name, last_probe, 2) != 0)
     {
@@ -191,19 +242,41 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
 	probe++;
 
     }
-
     retval->probe = probe;
-    retval->index = atoi (&probe_name[3]);
+#endif
 
 #if 1
-#warning "Overriding channel probes"
+#warning "Using guessed packing method" // this is wrong
+/* Probes are packed a3 a2 c3 c2 d3 d2 e3 e2 a1 a0 c1 c0 d1 d0 e1 e0 ?? */ 
+    retval->probe = (retval->probe_name[0] - 'A') * 2;
+    int probe_index = atoi (&retval->probe_name[1]);
+    if (probe_index <= 1)
+	retval->probe += 8;
+    retval->probe += 1 - (probe_index % 2);
+#endif
+
+#if 0
+#warning "Overriding channel probes" // for pertec?
     if (strncmp (retval->probe_name, "A2", 2) == 0)
-	retval->probe = 5;
+	retval->probe = 1;
     else if (strncmp (retval->probe_name, "A1", 2) == 0)
 	retval->probe = 8;
     else if (strncmp (retval->probe_name, "A0", 2) == 0)
 	retval->probe = 9;
 #endif
+
+#if 1
+#warning "Overriding channel probes for 8250"
+    if (strncmp (retval->probe_name, "A3", 2) == 0)
+	retval->probe = 1;
+    else if (strncmp (retval->probe_name, "A2", 2) == 0)
+	retval->probe = 2;
+    else if (strncmp (retval->probe_name, "D2", 2) == 0)
+	retval->probe = 7;
+    else if (strncmp (retval->probe_name, "D3", 2) == 0)
+	retval->probe = 3;
+#endif
+
 #if 0
     printf ("Added channel %s %s - (%d, %d) %s\n",
 	    retval->probe_name, retval->name, retval->probe, retval->index, retval->inverted ? "Inverted" : "");
@@ -212,16 +285,34 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     return retval;
 }
 
-bulk_capture *build_dump (unsigned char *data, int length)
+bulk_capture *build_dump (void *data, int length)
 {
    bulk_capture *retval;
+   capture *c;
+   int i;
+   int nrecords = length / sizeof (capture);
 
    retval = malloc (sizeof (bulk_capture));
    retval->data = malloc (length);
 
    //data += sizeof (capture * 16); // skip the header crap
 
-   memcpy (retval->data, data, length);
+    /* Attempt to convert the endian-ness of them? */
+    for (i = 0; i < nrecords; i++)
+    {
+	int v;
+	c = (capture *)(((char *)data) + i * sizeof (capture));
+	for (v = 0; v < CAPTURE_DATA_BYTES / 4; v++)
+	{
+	    uint32_t *val;
+	    val = (uint32_t *)&c->data[v];
+	    *val = htonl (*val);
+	}
+
+	memcpy (&retval->data[i], c, sizeof (capture));
+    }
+
+   //memcpy (retval->data, data, length);
 
    retval->length = length;
 
