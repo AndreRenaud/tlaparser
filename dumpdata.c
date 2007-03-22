@@ -142,17 +142,43 @@ int capture_bit (capture *cap, channel_info *c)
     return retval ? 1 : 0;
 }
 
-channel_info *capture_channel_details (capture *cap, char *channel_name, list_t *channels)
+static void simplify_probe_name (char *probe_name, char *result)
+{
+    char *p, *r;
+
+    for (p = probe_name, r = result; *p; p++)
+    {
+	if (strchr ("<>_ .[]()", *p)) /* Which characters in the name do we ignore */
+	    continue;
+	*r = *p;
+	r++;
+    }
+    *r = '\0';
+}
+
+/* Try and convert the name we're using, with the name that was entered into the scope
+ * Be a bit generous, look for substrings, ignore case etc...
+ * Should possibly try and drop characters like '<', '>', '_'
+ */
+channel_info *capture_channel_details (capture *cap, char *channel_name_full, list_t *channels)
 {
     list_t *n;
+    char channel_name[100];
+    char probe_name[100];
 
+    simplify_probe_name (channel_name_full, channel_name);
+
+    /* Do they exactly match */
     for (n = channels; n!= NULL; n = n->next)
     {
 	channel_info *c = n->data;
-	if (strcasecmp (c->name, channel_name) == 0)
-	{
+	simplify_probe_name (c->name, probe_name);
+	//printf ("Comparing '%s' to '%s'\n", probe_name, channel_name);
+
+	if (strcasestr (probe_name, channel_name))
 	    return c;
-	}
+	if (strcasestr (channel_name, probe_name))
+	    return c;
     }
 
     printf ("Unknown channel: %s\n", channel_name);

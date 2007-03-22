@@ -200,7 +200,7 @@ static int get_data (capture *c, list_t *channels)
 
     for (i = 0; i < 8; i++)
     {
-	sprintf (name, "db%d", i);
+	sprintf (name, "db<%d>", i);
 	bit = capture_bit_name (c, name, channels) ? 0 : 1; // invert the logic
 	retval |= bit << i;
     }
