@@ -1,7 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "dumpdata.h"
 #include "common.h"
+
+static int active_device = -1;
 
 //  from pg 45 table 8 of scsi 2 spec, based on msg, c/d, i/o
 static char *scsi_phases[] = { "DATA OUT", "DATA IN", "COMMAND", "STATUS", "*1", "*2", "MESSAGE OUT", "MESSAGE IN"};
@@ -96,7 +99,7 @@ static void dump_buffer (unsigned char *buffer, int len)
 	return;
 
     printf ("Data length: %d\n", len);
-#define LINELEN 16
+#define LINELEN 12
     for (i = 0; i < len; i+=LINELEN)
     {
 	int this_len = min(LINELEN, len - i);
@@ -104,18 +107,18 @@ static void dump_buffer (unsigned char *buffer, int len)
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j]);
 
+	printf ("%*s| ", (LINELEN - this_len) * 3, "");
+	for (j = 0; j < this_len; j++)
+	    printf ("%2.2x ", buffer[i + j] ^ 0xff);
+
+	printf ("%*s| ", (LINELEN - this_len) * 3, "");
 	for (j = 0; j < this_len; j++)
 	    printf ("%c", printable_char (buffer[i + j]));
+
 	printf ("\n");
     }
     printf ("\n");
 
-}
-
-static unsigned char flip (unsigned char ch)
-{
-    return ((ch & 0x80) >> 7) | ((ch & 0x40) >> 5) | ((ch & 0x20) >> 3) | ((ch & 0x10) >> 1) |
-	    ((ch & 0x08) << 1) | ((ch & 0x04) << 3) | ((ch & 0x02) << 5) | ((ch & 0x01) << 7);
 }
 
 static char *scsi_command_name (int cmd)
@@ -207,45 +210,70 @@ static int get_data (capture *c, list_t *channels)
     if (par != parity (retval))
 	time_log (c, "parity error: 0x%x (par = %d, not %d)\n", retval, par, parity (retval));
 
-    //printf ("get_data: %d\n", retval);
-
     return retval;
-#if 0
-#warning "Data probe hard coded to e0"
-    return (~flip (c->data[3])) & 0xff;
-#endif
 }
 
-static void parse_scsi_cap (capture *c, list_t *channels)
+struct pin_assignments
+{
+    int init;
+
+    channel_info *nbsy;
+    channel_info *nack;
+    channel_info *nreq;
+    channel_info *nsel;
+    channel_info *nrst;
+};
+
+static void parse_scsi_cap (capture *c, list_t *channels, int last)
 {
     static capture *prev = NULL;
     static int last_phase = -1;
-    static unsigned char buffer[20];
+    static unsigned char buffer[1024];
     static int buffer_len = 0;
     static int current_device = -1;
     static int last_phase_command = -1;
+    static int last_good_ack = 0;
+    static struct pin_assignments pa = {-1};
+
+    if (pa.init == -1 && c)
+    {
+	pa.init = 1;
+	pa.nbsy = capture_channel_details (c, "nbsy", channels);
+	pa.nack = capture_channel_details (c, "nack", channels);
+	pa.nreq = capture_channel_details (c, "nreq", channels);
+	pa.nsel = capture_channel_details (c, "nsel", channels);
+	pa.nrst = capture_channel_details (c, "nrst", channels);
+    }
 
     if (!prev)
 	goto out;
  
     // SEL went low -> high, device selection 
-    if (capture_bit_transition_name (c, prev, "nSEL", channels, TRANSITION_high_to_low))
+    if (capture_bit_transition (c, prev, pa.nsel, TRANSITION_high_to_low))
     {
 	int ch = get_data (c, channels);
-	if (ch != current_device && !option_set ("device1") && !option_set("device2"))
+	if (ch != current_device)
 	    time_log (c, "Selected device: 0x%2.2x\n", ch);
 	current_device = ch;
     }
 
-    if (option_set ("device1") && current_device != 1)
+    if (capture_bit (c, pa.nrst) != capture_bit (prev, pa.nrst))
+	time_log (c, "Bus reset %s\n", capture_bit (c, pa.nrst) ? "end" : "start");
+
+    if (active_device != -1 && current_device != active_device)
 	return;
 
-    if (option_set ("device2") && current_device != 2)
-	return;
+#if 0
+    if (capture_bit (c, pa.nack))
+	last_good_ack = capture_time (c);
+
+    if (!capture_bit (c, pa.nreq) && capture_time(c) - last_good_ack > 100 * 1000)
+	time_log (c, "Long delay before nreq\n");
+#endif
 
     // bsy is low, and nack goes from high to low
-    if (!capture_bit_name (c, "nBSY", channels) && 
-	capture_bit_transition_name (c, prev, "nACK", channels, TRANSITION_high_to_low))
+    if (!capture_bit (c, pa.nbsy) &&
+	capture_bit_transition (c, prev, pa.nack, TRANSITION_high_to_low))
     {
 	int phase = 0;
 	int ch;
@@ -256,12 +284,12 @@ static void parse_scsi_cap (capture *c, list_t *channels)
 	phase |= capture_bit_name (c, "nIO", channels) << 0;
 	phase = (~phase) & 0x7; // invert, since signals are negative logic
 
-	if (phase != last_phase)
+	if (phase != last_phase && last_phase != -1)
 	{
+	    time_log (c, "Phase: %s (%d)\n", scsi_phases[last_phase], last_phase);
 	    decode_scsi_command (last_phase, buffer, last_phase_command);
 	    dump_buffer (buffer, buffer_len);
 	    buffer_len = 0;
-	    time_log (c, "Phase: %s\n", scsi_phases[phase]);
 	}
 	ch = get_data (c, channels);
 	if (phase == 2 && buffer_len == 0) // COMMAND phase, first byte, so record the command
@@ -269,12 +297,18 @@ static void parse_scsi_cap (capture *c, list_t *channels)
 
 	buffer[buffer_len] = ch;
 	buffer_len++;
+	if (buffer_len > sizeof (buffer))
+	{
+	    fprintf (stderr, "ARGH BUFFER OVERUN\n");
+	    abort ();
+	}
 	last_phase = phase;
     }
    
     // bsy went high, end of transaction 
-    if (capture_bit_name (c, "nBSY", channels) && !capture_bit_name (prev, "nBSY", channels))
+    if (last_phase != -1 && (capture_bit_transition (c, prev, pa.nbsy, TRANSITION_low_to_high) || last))
     {
+	time_log (c, "Phase: %s (%d)\n", scsi_phases[last_phase]);
 	decode_scsi_command (last_phase, buffer, last_phase_command);
 	dump_buffer (buffer, buffer_len);
 	buffer_len = 0;
@@ -294,7 +328,7 @@ static void parse_scsi_bulk_cap (bulk_capture *b, list_t *channels)
 
     for (i = 0; i < b->length / sizeof (capture); i++)
     {
-	parse_scsi_cap (c, channels);
+	parse_scsi_cap (c, channels, i == (b->length / sizeof (capture)) - 1);
 	c++;
     }
 }
@@ -303,8 +337,12 @@ void parse_scsi (list_t *cap, char *filename, list_t *channels)
 {
     list_t *n;
     int i;
+    char buffer[10];
 
     printf ("SCSI analysis of file: '%s'\n", filename);
+
+    if (option_val ("device", buffer, 10))
+	active_device = strtoul (buffer, NULL, 0);
 
     for (n = cap, i = 0; n != NULL; n = n->next, i++)
     {

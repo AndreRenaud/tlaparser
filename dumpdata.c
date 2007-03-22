@@ -96,8 +96,6 @@ void dump_changing_channels (list_t *cap, char *name, list_t *channels)
     for (b = 0; b < CAPTURE_DATA_BYTES; b++)
 	changes[b] = 0;
 
-    printf ("Changing channels on '%s'\n", name);
-
     for (n = cap; n != NULL; n = n->next)
     {
 	int i;
@@ -122,7 +120,7 @@ void dump_changing_channels (list_t *cap, char *name, list_t *channels)
 	}
 
     }
-    printf ("Changed bits: ");
+    printf ("Changed bits on '%s'\n", name);
     for (b = 0; b < CAPTURE_DATA_BYTES; b++)
 	printf ("0x%2.2x ", changes[b]);
     printf ("\n");
@@ -245,7 +243,7 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     retval->probe = probe;
 #endif
 
-#if 1
+#if 0
 #warning "Using guessed packing method" // this is wrong
 /* Probes are packed a3 a2 c3 c2 d3 d2 e3 e2 a1 a0 c1 c0 d1 d0 e1 e0 ?? */ 
     retval->probe = (retval->probe_name[0] - 'A') * 2;
@@ -255,17 +253,17 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     retval->probe += 1 - (probe_index % 2);
 #endif
 
-#if 0
-#warning "Overriding channel probes" // for pertec?
+#if 1
+#warning "Overriding channel probes" // for SCSI
     if (strncmp (retval->probe_name, "A2", 2) == 0)
-	retval->probe = 1;
+	retval->probe = 2;
     else if (strncmp (retval->probe_name, "A1", 2) == 0)
 	retval->probe = 8;
     else if (strncmp (retval->probe_name, "A0", 2) == 0)
 	retval->probe = 9;
 #endif
 
-#if 1
+#if 0
 #warning "Overriding channel probes for 8250"
     if (strncmp (retval->probe_name, "A3", 2) == 0)
 	retval->probe = 1;
