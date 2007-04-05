@@ -222,6 +222,7 @@ struct pin_assignments
     channel_info *nreq;
     channel_info *nsel;
     channel_info *nrst;
+    channel_info *dbg[4];
 };
 
 static void parse_scsi_cap (capture *c, list_t *channels, int last)
@@ -234,6 +235,9 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
     static int last_phase_command = -1;
     static int last_good_ack = 0;
     static struct pin_assignments pa = {-1};
+    static int outstanding_nreq = 0;
+    static uint64_t last_nreq = 0;
+    int i;
 
     if (pa.init == -1 && c)
     {
@@ -243,6 +247,13 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	pa.nreq = capture_channel_details (c, "nreq", channels);
 	pa.nsel = capture_channel_details (c, "nsel", channels);
 	pa.nrst = capture_channel_details (c, "nrst", channels);
+
+	for (i = 0; i < 4; i++)
+	{
+	    char buffer[10];
+	    sprintf (buffer, "dbg%d", i);
+	    pa.dbg[i] = capture_channel_details (c, buffer, channels);
+	}
     }
 
     if (!prev)
@@ -257,6 +268,12 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	current_device = ch;
     }
 
+    for (i = 0; i < 4; i++)
+    {
+	if (capture_bit (c, pa.dbg[i]) != capture_bit (prev, pa.dbg[i]))
+	    time_log (c, "DBG %d change: %d\n", i, capture_bit (c, pa.dbg[i]));
+    }
+
     if (capture_bit (c, pa.nrst) != capture_bit (prev, pa.nrst))
 	time_log (c, "Bus reset %s\n", capture_bit (c, pa.nrst) ? "end" : "start");
 
@@ -264,11 +281,22 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	return;
 
 #if 0
-    if (capture_bit (c, pa.nack))
-	last_good_ack = capture_time (c);
+    if (!capture_bit (c, pa.nreq) && capture_bit_transition (c, prev, pa.nack, TRANSITION_high_to_low))
+    {
+	outstanding_nreq = 1;
+	last_nreq = capture_time (c);
+    }
 
-    if (!capture_bit (c, pa.nreq) && capture_time(c) - last_good_ack > 100 * 1000)
-	time_log (c, "Long delay before nreq\n");
+    if (capture_bit_transition (c, prev, pa.nreq, TRANSITION_high_to_low))
+	outstanding_nreq = 0;
+
+    if (outstanding_nreq && (capture_time (c) - last_nreq) > 1000 && buffer_len > 0)
+    {
+	time_log (c, "Timeout, dumping buffer\n");
+	dump_buffer (buffer, buffer_len);
+	buffer_len = 0;
+	outstanding_nreq = 0;
+    }
 #endif
 
     // bsy is low, and nack goes from high to low
@@ -295,6 +323,8 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	if (phase == 2 && buffer_len == 0) // COMMAND phase, first byte, so record the command
 	    last_phase_command = ch;
 
+	if (buffer_len == 0)
+	    time_log (c, "Data start\n");
 	buffer[buffer_len] = ch;
 	buffer_len++;
 	if (buffer_len > sizeof (buffer))
@@ -308,7 +338,7 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
     // bsy went high, end of transaction 
     if (last_phase != -1 && (capture_bit_transition (c, prev, pa.nbsy, TRANSITION_low_to_high) || last))
     {
-	time_log (c, "Phase: %s (%d)\n", scsi_phases[last_phase]);
+	time_log (c, "Phase: %s (%d) (nbsy)\n", scsi_phases[last_phase], last_phase);
 	decode_scsi_command (last_phase, buffer, last_phase_command);
 	dump_buffer (buffer, buffer_len);
 	buffer_len = 0;
