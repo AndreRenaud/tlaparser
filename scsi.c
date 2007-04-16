@@ -258,6 +258,10 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 
     if (!prev)
 	goto out;
+
+    if (capture_bit (c, pa.nbsy) && capture_bit (c, pa.nsel) && 
+	(!(capture_bit (prev, pa.nbsy) && capture_bit (prev, pa.nsel))))
+	time_log (c, "Bus free\n");
  
     // SEL went low -> high, device selection 
     if (capture_bit_transition (c, prev, pa.nsel, TRANSITION_high_to_low))
