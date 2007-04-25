@@ -103,5 +103,7 @@ void compare_streams (stream_info_t *s1, stream_info_t *s2);
 
 int time_log (capture *c, char *msg, ...);
 
+void display_data_buffer (unsigned char *buffer, int len, int ebcdic);
+
 #endif
 

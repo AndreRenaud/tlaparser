@@ -19,6 +19,9 @@
 #ifdef PARSE_8250
 #include "8250.h"
 #endif
+#ifdef PARSE_61K
+#include "61k.h"
+#endif
 
 extern FILE *yyin;
 extern int yyparse (void *YYPARSE_PARAM);
@@ -45,6 +48,9 @@ static void usage (char *prog)
 #endif
 #ifdef PARSE_8250
 		     "\t-8          : 8250 check\n"
+#endif
+#ifdef PARSE_61K
+		     "\t-k          : 61k check\n"
 #endif
 		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n"
 	    );
@@ -160,6 +166,9 @@ int main (int argc, char *argv[])
 #ifdef PARSE_8250
     int p8250 = 0;
 #endif
+#ifdef PARSE_61K
+    int p61k = 0;
+#endif
     list_t *cap1 = NULL, *cap2 = NULL;
 
     while (1)
@@ -177,6 +186,9 @@ int main (int argc, char *argv[])
 #ifdef PARSE_8250
 		"8"
 #endif
+#ifdef PARSE_61K
+		"k"
+#endif
 		);
 	if (o == -1)
 	    break;
@@ -193,6 +205,9 @@ int main (int argc, char *argv[])
 #endif
 #ifdef PARSE_8250
 	    case '8': p8250 = 1; break;
+#endif
+#ifdef PARSE_61K
+	    case 'k': p61k = 1; break;
 #endif
 #ifdef PARSE_SCSI
 	    case 's': scsi = 1; break;
@@ -281,6 +296,12 @@ int main (int argc, char *argv[])
     if (p8250)
 	if (cap1)
 	    parse_8250 (cap1, file1, final_channels);
+#endif
+
+#ifdef PARSE_61K
+    if (p61k)
+	if (cap1)
+	    parse_61k (cap1, file1, final_channels);
 #endif
 
     return 0;

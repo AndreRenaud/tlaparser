@@ -19,6 +19,9 @@ OBJECTS+=pertec.o
 CFLAGS+=-DPARSE_8250
 OBJECTS+=8250.o
 
+CFLAGS+=-DPARSE_61K
+OBJECTS+=61k.o
+
 default: tlaparser
 
 tlaparser.c: parser.c
