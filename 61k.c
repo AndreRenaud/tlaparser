@@ -93,8 +93,8 @@ static void parse_61k_cap (capture *c, list_t *channels)
     static struct pin_assignments pa = {-1};
     static unsigned char buffer[1024];
     static int buffer_pos = -1;
-    static int last_dat = 0;
     static int last_cmd = -1;
+    static uint64_t last_data_req = 0;
 
     if (pa.init == -1)
     {
@@ -117,7 +117,8 @@ static void parse_61k_cap (capture *c, list_t *channels)
 		command_name (fixup (cmd)), cmd, fixup (cmd));
     }
 
-    if (capture_bit_transition (c, prev, pa.data_req, TRANSITION_high_to_low))
+    if (capture_bit_transition (c, prev, pa.data_req, TRANSITION_high_to_low) && 
+	(capture_time (c) - last_data_req) > 50) // at least 50ns between, or else it is jitter
     {
 	uint8_t ch = get_data (c, channels);
 	ch = fixup(ch);
@@ -129,37 +130,19 @@ static void parse_61k_cap (capture *c, list_t *channels)
 	}
 	buffer[buffer_pos] = ch;
 	buffer_pos++;
-	//time_log (c, "Got byte: 0x%x\n", ch);
+	//time_log (c, "Got byte: 0x%x (%lld)\n", ch, capture_time (c));
+	last_data_req = capture_time (c);
     }
 
-    if (capture_bit_transition (c, prev, pa.cntrl_busy, TRANSITION_high_to_low) && buffer_pos > 0)
+    if (capture_bit_transition (c, prev, pa.cntrl_busy, TRANSITION_low_to_high) && buffer_pos > 0)
     {
-	time_log (c, "Data transfer end: %d\n", buffer_pos);
+	//time_log (c, "Data transfer end: %d\n", buffer_pos);
 	display_data_buffer (buffer, buffer_pos, 0);
 	buffer_pos = -1;
-	last_dat = 0;
     }
 
-#if 0
     if (capture_bit (c, pa.cntrl_busy) != capture_bit (prev, pa.cntrl_busy))
-	time_log (c, "cntrl_busy changed to %d (%d)\n", capture_bit (c, pa.cntrl_busy), buffer_pos);
-#endif
-
-#if 0
-    if (capture_bit (c, pa.last_dat) != capture_bit (prev, pa.last_dat))
-	time_log (c, "last_dat changed to %d (%d)\n", capture_bit (c, pa.last_dat), buffer_pos);
-#endif
-
-    if (buffer_pos > 0 && capture_bit_transition (c, prev, pa.last_dat, TRANSITION_low_to_high))
-    //if (capture_bit_transition (c, prev, pa.last_dat, TRANSITION_high_to_low))
-	last_dat = 1;
-
-#if 0
-    {
-	uint8_t data = get_data (c, channels);
-	printf ("data: 0x%x (%s)\n", data, command_name (fixup (data)));
-    }
-#endif
+	time_log (c, "Unit gone %s\n", !capture_bit (c, pa.cntrl_busy) ? "busy" : "free");
 
 done:
     prev = c;

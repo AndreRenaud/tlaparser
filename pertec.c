@@ -103,6 +103,7 @@ static const char *pertec_command_name (int cmd)
     }
 }
 
+#if 0
 static void dump_buffer (char *title, unsigned char *buffer, int len)
 {
     int i;
@@ -115,6 +116,7 @@ static void dump_buffer (char *title, unsigned char *buffer, int len)
     }
     printf ("\n");
 }
+#endif
 
 struct pin_assignments
 {
@@ -245,7 +247,8 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
 	if (last_word)
 	{
-	    dump_buffer ("Write", buffer, buffer_pos);
+	    display_data_buffer (buffer, buffer_pos, 0);
+	    //dump_buffer ("Write", buffer, buffer_pos);
 	    buffer_pos = 0;
 	    last_word = 0;
 	    writing = 0;
@@ -261,7 +264,8 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
     if (buffer_pos && capture_bit_transition (c, prev, pa.idby, TRANSITION_falling_edge))
     {
-	dump_buffer ("Read", buffer, buffer_pos);
+	display_data_buffer (buffer, buffer_pos, 0);
+	//dump_buffer ("Read", buffer, buffer_pos);
 	buffer_pos = 0;
 	last_word = 0;
 	reading = 0;

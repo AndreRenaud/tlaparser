@@ -65,20 +65,6 @@ static char *nand_command (unsigned int command)
     }
 }
 
-static void dump_data_buffer (unsigned char *buffer, unsigned int len)
-{
-    int i;
-
-    printf ("\tData: ");
-    for (i = 0; i < len; i++)
-    {
-	if (i % 32 == 0)
-	    printf ("\n\t  ");
-	printf ("%2.2x ", buffer[i]);
-    }
-    printf ("\n\tLen=%d\n", len);
-}
-
 static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 {
     static unsigned int cle_mode;
@@ -116,7 +102,7 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 	    cle_mode = 1;
 	    if (data_len)
 	    {
-		dump_data_buffer (data_buffer, data_len);
+		display_data_buffer (data_buffer, data_len, 0);
 		data_len = 0;
 	    }
 	}
@@ -155,7 +141,7 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
     }
     else if (data_len) // finished accessing, so dump our outstanding data
     {
-	dump_data_buffer (data_buffer, data_len);
+	display_data_buffer (data_buffer, data_len, 0);
 	data_len = 0;
     }
 }

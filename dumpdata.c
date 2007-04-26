@@ -415,25 +415,30 @@ static uint8_t printable_char (int data)
 	    return '.';
 }
 
-#warning "Should convert all the modules to use this instead of their internal ones"
 void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
 {
     int i,j;
+    int linelen;
+    const char *columns = getenv ("COLUMNS"); /* for some reason this doesn't work */
+    int col = columns ? atoi (columns) : 80; /* Try to auto-adjust for terminal width */
 
+    col -= 8; // line prefix
+    col -= 4; // inter field stuff
+    linelen = col / 7;
+    
     printf ("Data length: %d\n", len);
-#define LINELEN 9
-    for (i = 0; i < len; i+=LINELEN)
+    for (i = 0; i < len; i+=linelen)
     {
-	int this_len = min(LINELEN, len - i);
+	int this_len = min(linelen, len - i);
 	printf ("  %4.4x: ", i); 
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j]);
 
-	printf ("%*s| ", (LINELEN - this_len) * 3, "");
+	printf ("%*s| ", (linelen - this_len) * 3, "");
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j] ^ 0xff);
 
-	printf ("%*s| ", (LINELEN - this_len) * 3, "");
+	printf ("%*s'", (linelen - this_len) * 3, "");
 	for (j = 0; j < this_len; j++)
 	{
 	    unsigned char ch = buffer[i + j];
@@ -442,6 +447,6 @@ void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
 	    printf ("%c", printable_char (ch));
 	}
 
-	printf ("\n");
+	printf ("%*s'\n", (linelen - this_len), "");
     }
 }

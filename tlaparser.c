@@ -30,13 +30,12 @@ extern list_t *final_channels;
 
 static void usage (char *prog)
 {
-    fprintf (stderr, "Usage: %s [options]\n", prog);
-    fprintf (stderr, "\t-1 filename : First file\n"
-		     "\t-2 filename : Second file (optional)\n"
-		     "\t-d	    : Dump file contents\n"
+    fprintf (stderr, "Usage: %s [options] tlafile\n", prog);
+    fprintf (stderr, "\t-d	    : Dump file contents\n"
 		     "\t-l	    : Dump channel names\n"
 		     "\t-c	    : Compare two files\n"
 		     "\t-b          : Dump changing bits\n"
+		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n"
 #ifdef PARSE_SCSI
 		     "\t-s	    : SCSI check\n"
 #endif
@@ -52,7 +51,6 @@ static void usage (char *prog)
 #ifdef PARSE_61K
 		     "\t-k          : 61k check\n"
 #endif
-		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n"
 	    );
 }
 
@@ -152,7 +150,7 @@ int option_val (char *name, char *buffer, int buff_len)
 
 int main (int argc, char *argv[])
 {
-    char *file1 = NULL, *file2 = NULL;
+    char *file;
     int dump = 0, compare = 0, list_channels = 0, changing = 0;
 #ifdef PARSE_SCSI
     int scsi = 0;
@@ -169,11 +167,11 @@ int main (int argc, char *argv[])
 #ifdef PARSE_61K
     int p61k = 0;
 #endif
-    list_t *cap1 = NULL, *cap2 = NULL;
+    list_t *cap = NULL;
 
     while (1)
     {
-	int o = getopt (argc, argv, "1:2:dblco:"
+	int o = getopt (argc, argv, "dblco:"
 #ifdef PARSE_SCSI
 		"s"
 #endif
@@ -194,8 +192,6 @@ int main (int argc, char *argv[])
 	    break;
 	switch (o)
 	{
-	    case '1': file1 = optarg; break;
-	    case '2': file2 = optarg; break;
 	    case 'd': dump = 1; break;
 	    case 'b': changing = 1; break;
 	    case 'l': list_channels = 1; break;
@@ -223,6 +219,9 @@ int main (int argc, char *argv[])
 	}
     }
 
+    file = argv[optind];
+    optind++;
+
     if (optind < argc)
     {
 	usage (argv[0]);
@@ -230,78 +229,46 @@ int main (int argc, char *argv[])
     }
 
 
-    if (!dump && !compare && !file1)
+    if (!dump && !compare && !file)
     {
 	usage (argv[0]);
 	return (EXIT_FAILURE);
     }
 
-    if (file1)
-	cap1 = load_capture (file1);
-    if (file2)
-	cap2 = load_capture (file2);
-
-#if 0 // for pertec really, drop for now
-    if (compare && cap1 && cap2)
-    {
-	stream_info_t *s1, *s2;
-	s1 = build_stream_info (cap1, file1);
-	s2 = build_stream_info (cap2, file2);
-	compare_streams (s1, s2);
-    }
-#endif
+    cap = load_capture (file);
 
     if (list_channels)
 	dump_channel_list (final_channels);
 
     if (changing)
-	if (cap1)
-	    dump_changing_channels (cap1, file1, final_channels);
-	if (cap2)
-	    dump_changing_channels (cap2, file2, final_channels);
+	dump_changing_channels (cap, file, final_channels);
 
     if (dump)
-    {
-	if (cap1)
-	    dump_capture_list (cap1, file1, final_channels);
-	if (cap2)
-	    dump_capture_list (cap2, file2, final_channels);
-    }
+	dump_capture_list (cap, file, final_channels);
 
 #ifdef PARSE_SCSI
     if (scsi)
-    {
-	if (cap1)
-	    parse_scsi (cap1, file1, final_channels);
-	if (cap2)
-	    parse_scsi (cap2, file2, final_channels);
-    }
+	parse_scsi (cap, file, final_channels);
 #endif
 
 #ifdef PARSE_XD
     if (xd)
-    {
-	if (cap1)
-	    parse_xd (cap1, file1, final_channels);
-    }
+	parse_xd (cap, file, final_channels);
 #endif
 
 #ifdef PARSE_PERTEC
     if (pertec)
-	if (cap1)
-	    parse_pertec (cap1, file1, final_channels);
+	parse_pertec (cap, file, final_channels);
 #endif
 
 #ifdef PARSE_8250
     if (p8250)
-	if (cap1)
-	    parse_8250 (cap1, file1, final_channels);
+	parse_8250 (cap, file, final_channels);
 #endif
 
 #ifdef PARSE_61K
     if (p61k)
-	if (cap1)
-	    parse_61k (cap1, file1, final_channels);
+	parse_61k (cap, file, final_channels);
 #endif
 
     return 0;
