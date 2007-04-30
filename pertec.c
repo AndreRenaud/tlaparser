@@ -4,7 +4,6 @@
 
 #include "dumpdata.h"
 #include "common.h"
-#include "pertec.h"
 
 static int pertec_id = 0; /* Which pertec id (combination of IFAD << 2 | ITAD0 << 1 | ITAD1 << 0) are we? */
 static int ignore_parity = 0; /* Do we ignore parity errors? */

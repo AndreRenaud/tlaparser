@@ -22,6 +22,9 @@ OBJECTS+=8250.o
 CFLAGS+=-DPARSE_61K
 OBJECTS+=61k.o
 
+CFLAGS+=-DPARSE_KENNEDY
+OBJECTS+=kennedy.o
+
 default: tlaparser
 
 tlaparser.c: parser.c

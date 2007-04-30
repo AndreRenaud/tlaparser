@@ -2,6 +2,7 @@
 
 #include "dumpdata.h"
 #include "common.h"
+#include "parser_prototypes.h"
 
 enum
 {

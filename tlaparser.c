@@ -7,51 +7,40 @@
 #include "common.h"
 #include "dumpdata.h"
 #include "parser.h"
-#ifdef PARSE_SCSI
-#include "scsi.h"
-#endif
-#ifdef PARSE_XD
-#include "xd.h"
-#endif
-#ifdef PARSE_PERTEC
-#include "pertec.h"
-#endif
-#ifdef PARSE_8250
-#include "8250.h"
-#endif
-#ifdef PARSE_61K
-#include "61k.h"
-#endif
+#include "parser_prototypes.h"
 
 extern FILE *yyin;
 extern int yyparse (void *YYPARSE_PARAM);
 extern list_t *final_capture;
 extern list_t *final_channels;
 
+struct parser_info
+{
+    parser_function func;
+    char code;
+    char *description;
+};
+
+struct parser_info parsers[] = {
+    {parse_61k, '6', "Parse 61K tape drive"},
+    {parse_8250, '8', "Parse 8250 uart bus"},
+    {parse_kennedy, 'k', "Parse Kennedy tape drive bus"},
+    {parse_pertec, 'p', "Parse Pertec tape drive bus"},
+    {parse_scsi, 's', "Parse SCSI bus"},
+    {parse_xd, 'x', "Parse xD/NAND data bus"},
+};
+#define NPARSERS (sizeof (parsers) / sizeof (parsers[0]))
+
 static void usage (char *prog)
 {
+    int i;
     fprintf (stderr, "Usage: %s [options] tlafile\n", prog);
     fprintf (stderr, "\t-d	    : Dump file contents\n"
 		     "\t-l	    : Dump channel names\n"
-		     "\t-c	    : Compare two files\n"
 		     "\t-b          : Dump changing bits\n"
-		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n"
-#ifdef PARSE_SCSI
-		     "\t-s	    : SCSI check\n"
-#endif
-#ifdef PARSE_XD
-		     "\t-x	    : xD check\n"
-#endif
-#ifdef PARSE_PERTEC
-		     "\t-p	    : pertec check\n"
-#endif
-#ifdef PARSE_8250
-		     "\t-8          : 8250 check\n"
-#endif
-#ifdef PARSE_61K
-		     "\t-k          : 61k check\n"
-#endif
-	    );
+		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n");
+    for (i = 0; i < NPARSERS; i++)
+	printf ("\t-%c	    : %s\n", parsers[i].code, parsers[i].description);
 }
 
 static list_t *load_capture (char *filename)
@@ -78,14 +67,15 @@ static list_t *load_capture (char *filename)
 	fprintf (stderr, "File too large: %s - increase MAX_DATA_LEN\n", filename);
 	return NULL;
     }
-    buf = malloc (1 * 1024 * 1024);
+    buf = malloc (10 * 1024 * 1024);
 
-    setvbuf (yyin, buf, _IOFBF, 1 * 1024 * 1024);
+    setvbuf (yyin, buf, _IOFBF, 10 * 1024 * 1024);
 
     yyparse (NULL);
     cap = final_capture;
     fclose (yyin);
     free (buf);
+    yyin = NULL;
 
     return cap;
 }
@@ -148,46 +138,27 @@ int option_val (char *name, char *buffer, int buff_len)
     return 0;
 }
 
+
+
 int main (int argc, char *argv[])
 {
     char *file;
-    int dump = 0, compare = 0, list_channels = 0, changing = 0;
-#ifdef PARSE_SCSI
-    int scsi = 0;
-#endif
-#ifdef PARSE_XD
-    int xd = 0;
-#endif
-#ifdef PARSE_PERTEC
-    int pertec = 0;
-#endif
-#ifdef PARSE_8250
-    int p8250 = 0;
-#endif
-#ifdef PARSE_61K
-    int p61k = 0;
-#endif
+    int dump = 0, list_channels = 0, changing = 0;
     list_t *cap = NULL;
+    int parse_func = -1;
+    char opt_strings[100] = "dblo:";
+    int i;
+
+    for (i = 0; i < NPARSERS; i++)
+    {
+	int len = strlen (opt_strings);
+	opt_strings[len] = parsers[i].code;
+	opt_strings[len + 1] = '\0';
+    }
 
     while (1)
     {
-	int o = getopt (argc, argv, "dblco:"
-#ifdef PARSE_SCSI
-		"s"
-#endif
-#ifdef PARSE_XD
-		"x"
-#endif
-#ifdef PARSE_PERTEC
-		"p"
-#endif
-#ifdef PARSE_8250
-		"8"
-#endif
-#ifdef PARSE_61K
-		"k"
-#endif
-		);
+	int o = getopt (argc, argv, opt_strings);
 	if (o == -1)
 	    break;
 	switch (o)
@@ -195,27 +166,21 @@ int main (int argc, char *argv[])
 	    case 'd': dump = 1; break;
 	    case 'b': changing = 1; break;
 	    case 'l': list_channels = 1; break;
-	    case 'c': compare = 1; break;
-#ifdef PARSE_PERTEC
-	    case 'p': pertec = 1; break;
-#endif
-#ifdef PARSE_8250
-	    case '8': p8250 = 1; break;
-#endif
-#ifdef PARSE_61K
-	    case 'k': p61k = 1; break;
-#endif
-#ifdef PARSE_SCSI
-	    case 's': scsi = 1; break;
-#endif
-#ifdef PARSE_XD
-	    case 'x': xd = 1; break;
-#endif
 	    case 'o': options = optarg; break;
 	    default:
-		fprintf (stderr, "Unknown option: %d (%c)\n", o, o);
-		usage (argv[0]);
-		return (EXIT_FAILURE);
+		for (i = 0; i < NPARSERS; i++)
+		    if (parsers[i].code == o)
+		    {
+			parse_func = i;
+			break;
+		    }
+
+		if (i == NPARSERS)
+		{
+		    fprintf (stderr, "Unknown option: %d (%c)\n", o, o);
+		    usage (argv[0]);
+		    return (EXIT_FAILURE);
+		}
 	}
     }
 
@@ -229,7 +194,7 @@ int main (int argc, char *argv[])
     }
 
 
-    if (!dump && !compare && !file)
+    if (!dump && !file)
     {
 	usage (argv[0]);
 	return (EXIT_FAILURE);
@@ -246,30 +211,8 @@ int main (int argc, char *argv[])
     if (dump)
 	dump_capture_list (cap, file, final_channels);
 
-#ifdef PARSE_SCSI
-    if (scsi)
-	parse_scsi (cap, file, final_channels);
-#endif
-
-#ifdef PARSE_XD
-    if (xd)
-	parse_xd (cap, file, final_channels);
-#endif
-
-#ifdef PARSE_PERTEC
-    if (pertec)
-	parse_pertec (cap, file, final_channels);
-#endif
-
-#ifdef PARSE_8250
-    if (p8250)
-	parse_8250 (cap, file, final_channels);
-#endif
-
-#ifdef PARSE_61K
-    if (p61k)
-	parse_61k (cap, file, final_channels);
-#endif
+    if (parse_func >= 0)
+	parsers[parse_func].func (cap, file, final_channels);
 
     return 0;
 }

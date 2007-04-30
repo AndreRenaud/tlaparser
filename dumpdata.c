@@ -225,6 +225,23 @@ int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t
     return capture_bit_transition (cur, prev, chan, dir);
 }
 
+static int name_to_index (const char *probe_name)
+{
+#warning "Using vaguelly guessed table to convert names to probe indicies"
+    int i;
+    const char *probe_index[] = {"E0", "A3", "A2", "D3", /* 0 - 3 */
+				 NULL, NULL, "E1", "D2", /* 4 - 7 */
+				 "A1", "A0", NULL, NULL, /* 8 - 11 */
+				 "C3", "C2", NULL, NULL, /* 12 - 15 */
+    };
+#define NPROBES (sizeof (probe_index) / sizeof (probe_index[0]))
+
+    for (i = 0; i < NPROBES; i++)
+	if (probe_index[i] && strncmp (probe_index[i], probe_name, 2) == 0)
+	    return i;
+    return 0;
+}
+
 /* Works out where in the binary blob the channel info is found
  * Channels are ordered as specified in the file (So the order we call build_channel matters)
  * Probes are also paired, so e3 & e2 are always together, so are a1 & a0. If a1 is entirely unused,
@@ -281,7 +298,10 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     retval->probe += 1 - (probe_index % 2);
 #endif
 
-#if 1
+    retval->probe = name_to_index (retval->probe_name); 
+
+
+#if 0
 #warning "Overriding channel probes for SCSI & 61K"
     if (strncmp (retval->probe_name, "A2", 2) == 0)
 	retval->probe = 2;
@@ -302,6 +322,7 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     else if (strncmp (retval->probe_name, "D3", 2) == 0)
 	retval->probe = 3;
 #endif
+
 
 #if 0
     printf ("Added channel %s %s - (%d, %d) %s\n",
