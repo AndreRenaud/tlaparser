@@ -40,7 +40,7 @@ static int decode_command (int command, char *buffer)
     const char *density[] = {"???", "1600/200", "556", "800"};
     const char *commands56[] = {"", "Read", "Write", "Search Forward File"};
     const char *commands7[] = {"", "Write EOF"};
-    const char *commands89[] = {"", "Backspace", "Backspace File", "Rewind"};
+    const char *commands89[] = {"", "Backspace", "Rewind", "Backspace File"};
     const char *commands10[] = {"", "Erase"};
     const char *commands12[] = {"", "Search Forward"};
 
@@ -72,7 +72,7 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
 {
     static capture *prev = NULL;
     static struct pin_assignments pa = {-1};
-    static unsigned char buffer[4096];
+    static unsigned char buffer[100000];
     static int buffer_pos = 0;
     static unsigned int is_writing = 0;
 
@@ -140,6 +140,13 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
 	else
 	    is_writing = 0;
 	
+    }
+
+    if (buffer_pos >= sizeof (buffer))
+    {
+	time_log (c, "ARGH: BUFFER TOO LARGE\n");
+	display_data_buffer (buffer, buffer_pos, 0);
+	buffer_pos = 0;
     }
 
 done:
