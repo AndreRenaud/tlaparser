@@ -229,10 +229,19 @@ static int name_to_index (const char *probe_name)
 {
 #warning "Using vaguelly guessed table to convert names to probe indicies"
     int i;
+#ifdef CAPTURE_DATA_BYTES == 18
     const char *probe_index[] = {"E0", "A3", "A2", "D3", /* 0 - 3 */
 				 NULL, NULL, "E1", "D2", /* 4 - 7 */
 				 "A1", "A0", NULL, NULL, /* 8 - 11 */
 				 "C3", "C2", NULL, NULL, /* 12 - 15 */
+#elif CAPTURE_DATA_BYTES == 14
+    const char *probe_index[] = {NULL, NULL, NULL, NULL, /* 0 - 3 */
+				 NULL, NULL, "D1", "D0", /* 4 - 7 */
+				 "C3", "C2", "C1", "C0", /* 8 - 11 */
+#else
+#error "Don't know the probe layout for this analyser"
+#endif
+
     };
 #define NPROBES (sizeof (probe_index) / sizeof (probe_index[0]))
 

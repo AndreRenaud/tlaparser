@@ -18,7 +18,8 @@ enum
 };
 
 
-#define CAPTURE_DATA_BYTES 18
+//#define CAPTURE_DATA_BYTES 14 // for the TLA 714
+#define CAPTURE_DATA_BYTES 18 // for the TLA 5204
 
 struct capture
 {

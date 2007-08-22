@@ -11,6 +11,7 @@
 
 extern FILE *yyin;
 extern int yyparse (void *YYPARSE_PARAM);
+extern int nprobes;
 extern list_t *final_capture;
 extern list_t *final_channels;
 
@@ -71,11 +72,20 @@ static list_t *load_capture (char *filename)
 
     setvbuf (yyin, buf, _IOFBF, 10 * 1024 * 1024);
 
+    nprobes = 0;
     yyparse (NULL);
     cap = final_capture;
     fclose (yyin);
     free (buf);
     yyin = NULL;
+
+    // each probe needs 2 bytes, plus the 2 bytes for the clocking lines
+    if (nprobes * 2 + 2 != CAPTURE_DATA_BYTES)
+    {
+	fprintf (stderr, "Probes doesn't line up with CAPTURE_DATA_BYTES (%d, %d)\n", nprobes, CAPTURE_DATA_BYTES);
+	fprintf (stderr, "Possibly setup for incorrect scope\n");
+	return NULL;
+    }
 
     return cap;
 }

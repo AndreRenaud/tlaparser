@@ -22,6 +22,7 @@ int yylex ();
 
 list_t *final_capture = NULL;
 list_t *final_channels = NULL;
+int nprobes;
 %}
 
 %union{
@@ -45,10 +46,10 @@ list_t *list;
 %token t_COMPOSITE_CELL t_STRING_CELL t_ARRAY_CELL t_BYTE_CELL t_LONG_CELL t_LONG_LONG_CELL 
 %token t_BOOLEAN_CELL t_DOUBLE_CELL t_CHANNEL_CELL t_INSTRUMENT_CELL
 %token t_RDA_INTERNAL t_CCM_TIME_PER_DIV
-%token t_CAP_ROOT
+%token t_CAP_ROOT t_CJM_PROBE
 
 %type <string> ident
-%type <list> cblock cell_list block composite_cell array_cell rda_internal cap_root byte_cell string_cell boolean_cell long_cell long_long_cell double_cell channel_cell ccm_time_per_div instrument_cell cell
+%type <list> cblock cell_list block composite_cell array_cell rda_internal cap_root byte_cell string_cell boolean_cell long_cell long_long_cell double_cell channel_cell ccm_time_per_div instrument_cell cell cjm_probe
 %type <integer> channel_contents
 
 %%
@@ -81,6 +82,8 @@ channel_contents: t_LBRACE t_RBRACE		{$$ = 0;}
 instrument_cell: t_INSTRUMENT_CELL t_STRING t_STRING block {$$ = $4;}
 
 ccm_time_per_div: t_CCM_TIME_PER_DIV t_STRING t_STRING t_EQUALS t_LBRACE number number number number ident t_RBRACE {$$ = NULL;}
+
+cjm_probe: t_CJM_PROBE t_STRING t_STRING block {$$ = $4; nprobes++}
 
 cap_root: t_CAP_ROOT t_STRING t_STRING block {$$ = $4;};
 
@@ -129,6 +132,7 @@ cell: composite_cell
    | cblock
    | rda_internal
    | ccm_time_per_div
+   | cjm_probe
    ;
 
 number: t_NUMBER;

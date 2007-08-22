@@ -33,6 +33,7 @@ int line_number = 1;
 "CafcDoubleCell" {return t_DOUBLE_CELL;}
 "CjmChannel"	{return t_CHANNEL_CELL;}
 "CjmInstrument"	{return t_INSTRUMENT_CELL;}
+"CjmProbe"	{return t_CJM_PROBE;}
 
 "CapRoot"         {return t_CAP_ROOT;}
 
