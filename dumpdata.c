@@ -229,7 +229,7 @@ static int name_to_index (const char *probe_name)
 {
 #warning "Using vaguelly guessed table to convert names to probe indicies"
     int i;
-#ifdef CAPTURE_DATA_BYTES == 18
+#if CAPTURE_DATA_BYTES == 18
     const char *probe_index[] = {"E0", "A3", "A2", "D3", /* 0 - 3 */
 				 NULL, NULL, "E1", "D2", /* 4 - 7 */
 				 "A1", "A0", NULL, NULL, /* 8 - 11 */
@@ -248,6 +248,7 @@ static int name_to_index (const char *probe_name)
     for (i = 0; i < NPROBES; i++)
 	if (probe_index[i] && strncmp (probe_index[i], probe_name, 2) == 0)
 	    return i;
+    fprintf (stderr, "Could not determine index for probe '%s'\n", probe_name);
     return 0;
 }
 
