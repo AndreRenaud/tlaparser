@@ -144,6 +144,20 @@ int capture_bit (capture *cap, channel_info *c)
     return retval ? 1 : 0;
 }
 
+unsigned int capture_data(capture *cap, channel_info *c[], int len)
+{
+    unsigned data = 0x0, i;
+    
+    for(i = 0; i < len; i++) {
+	int bit = capture_bit(cap, c[i]);
+	
+	if(bit)
+	    data |= (1 << i);
+    }
+    
+    return data;
+}
+
 static void simplify_probe_name (char *probe_name, char *result)
 {
     char *p, *r;
@@ -177,6 +191,17 @@ channel_info *capture_channel_details (capture *cap, char *channel_name_full, li
 	simplify_probe_name (c->name, probe_name);
 	//printf ("Comparing '%s' to '%s'\n", probe_name, channel_name);
 
+	if (strcasecmp (probe_name, channel_name) == 0)
+	    return c;
+    }
+
+    /* Do they partially match */
+    for (n = channels; n!= NULL; n = n->next)
+    {
+	channel_info *c = n->data;
+	simplify_probe_name (c->name, probe_name);
+	//printf ("Comparing '%s' to '%s'\n", probe_name, channel_name);
+	
 	if (strcasestr (probe_name, channel_name))
 	    return c;
 	if (strcasestr (channel_name, probe_name))
@@ -186,6 +211,7 @@ channel_info *capture_channel_details (capture *cap, char *channel_name_full, li
     printf ("Unknown channel: %s\n", channel_name);
     return NULL;
 }
+
 
 int capture_bit_name (capture *cap, char *channel_name, list_t *channels)
 {
@@ -231,9 +257,9 @@ static int name_to_index (const char *probe_name)
     int i;
 #if CAPTURE_DATA_BYTES == 18
     const char *probe_index[] = {"E0", "A3", "A2", "D3", /* 0 - 3 */
-				 NULL, NULL, "E1", "D2", /* 4 - 7 */
-				 "A1", "A0", NULL, NULL, /* 8 - 11 */
-				 "C3", "C2", NULL, NULL, /* 12 - 15 */
+				 "E3", "E2", "E1", "D2", /* 4 - 7 */
+				 "A1", "A0", "D1", "D0", /* 8 - 11 */
+				 "C3", "C2", "C1", "C0", /* 12 - 15 */
 #elif CAPTURE_DATA_BYTES == 14
     const char *probe_index[] = {NULL, NULL, NULL, NULL, /* 0 - 3 */
 				 NULL, NULL, "D1", "D0", /* 4 - 7 */

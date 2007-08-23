@@ -85,6 +85,9 @@ int capture_bit_name (capture *cap, char *channel_name, list_t *channels);
 // retrieves 1 bit from the capture, from probe 'probe' ( see the PROBE_ structure) index 'index'
 int capture_bit (capture *cap, channel_info *c);
 
+// retrieves len bits from the capture, using the array of probes
+unsigned int capture_data(capture *cap, channel_info *c[], int len);
+
 // returns true/false if a given bit performs a transition between two captures (dir is TRANSITION_...)
 int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int dir);
 // same as above, but specify the channel by name

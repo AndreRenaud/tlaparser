@@ -7,6 +7,9 @@ OBJECTS=tlaparser.o parser.o lexer.o dumpdata.o lists.o
 HEADERS=*.h
 GENERATED=parser.c parser.h lexer.c parser.output
 
+CFLAGS+=-DPARSE_PCI
+OBJECTS+=pci.o
+
 CFLAGS+=-DPARSE_SCSI
 OBJECTS+=scsi.o
 

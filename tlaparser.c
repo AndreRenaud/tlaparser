@@ -29,6 +29,7 @@ struct parser_info parsers[] = {
     {parse_pertec, 'p', "Parse Pertec tape drive bus"},
     {parse_scsi, 's', "Parse SCSI bus"},
     {parse_xd, 'x', "Parse xD/NAND data bus"},
+    {parse_pci, 'P', "Parse PCI bus"},
 };
 #define NPARSERS (sizeof (parsers) / sizeof (parsers[0]))
 
