@@ -52,7 +52,7 @@ static list_t *load_capture (char *filename)
     char *buf;
 
     
-    printf ("About to load %s\n", filename);
+    fprintf (stderr, "About to load %s\n", filename);
 
     yyin = fopen (filename, "r");
     if (!yyin)

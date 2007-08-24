@@ -85,16 +85,30 @@ static void pci_time_log(char *fmt, ...)
 static void pci_dump_buffer(capture *c)
 {
     const char *command_name[] = {
-	"Interrupt acknowledge", "Special cycle", "IO Read", "IO Write", "Reserved",
-	"Reserved", "Read", "Write", "Reserved", "Reserved", "Config Read", "Config Write",
-	"Read Multi", "Dual address cycle", "Read line", "Write and invalidate"
+	"IA",	/* Interrupt acknowledge */ 
+	"SC", 	/* Special cycle */
+	"IOR",	/* IO Read */
+	"IOW",	/* IO Write */ 
+	"*",	/* Reserved */
+	"*",	/* Reserved */
+	"R",	/* Read */ 
+	"W",	/* Write */ 
+	"*",	/* Reserved */ 
+	"*",	/* Reserved */ 
+	"CR",	/* Config Read */
+	"CW",	/* Config Write */
+	"RM",	/* Read multi */ 
+	"DAC",	/* Dual address cycle */ 
+	"RL",	/* Read line */ 
+	"WI",	/* Write and invalidate */
     };
     int i;
 
-    pci_time_log("%s at addr 0x%.8x of length %d\n", command_name[state], address, buf_idx); 
+    pci_time_log("%s@0x%.8x [l=%d]: ", command_name[state], address, buf_idx); 
 
     for(i = 0; i < buf_idx; i++) 
-	printf("\t0x%.8x\n", buffer[i]);
+	printf("0x%.8x ", buffer[i]);
+    printf("\n");
 }
 
 void pci_update_clock_hold(capture *c)
@@ -149,7 +163,7 @@ static void parse_pci_capture(capture *c, list_t *channels, int last)
     pci_capture_on_clock(c);    
     switch(state) {
     case PCI_IDLE:	
-	if(!(prev_sample_frame == 1 && frame == 0) && 
+	if(!(prev_sample_frame == 1 && frame == 0) &&
 	   ((prev_clock_frame == 1 && frame == 0) || prev_sample_frame == 0)) {
 	    /* Frame has been pulled low. Start of transaction */	    
 	    switch(prev_sample_command) {		
@@ -252,10 +266,10 @@ void parse_pci(list_t * cap, char *filename, list_t * channels)
     list_t *n;
     int i;
 
-    printf("PCI analysis of file: '%s'\n", filename);
+    fprintf(stderr, "PCI analysis of file: '%s'\n", filename);
 
     for (n = cap, i = 0; n != NULL; n = n->next, i++) {
-	printf("Parsing capture block %d\n", i);
+	fprintf(stderr, "Parsing capture block %d\n", i);
 	parse_pci_bulk_capture(n->data, channels);
     }
 }

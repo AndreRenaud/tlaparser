@@ -80,7 +80,7 @@ C(l|w|j|s|n|net|c)m[a-zA-Z0-9]+    {yylval.string = strdup (yytext); return t_C;
 		if (datasetlen > 1000000 && datasetpos * 10 / datasetlen != percentage) // 10% gaps, don't do below as it is slightly slower
 		{
 		    percentage = datasetpos * 10 / datasetlen;
-		    printf ("%d%% loaded\n", percentage * 10);
+                    fprintf (stderr, "%d%% loaded\n", percentage * 10);
 		}
 	      }
 <dataset>.    {data[datasetpos++]=yytext[0]; 
