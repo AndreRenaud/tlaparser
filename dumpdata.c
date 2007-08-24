@@ -402,23 +402,30 @@ bulk_capture *build_dump (void *data, int length)
    //printf ("build_dump: %p, %d -> %p, %d\n", data, length, retval->data, retval->length);
 
    return retval;
-}
+ }
 
-
+capture *first_capture;
 int time_log (capture *c, char *msg, ...)
 {
     char buffer[1024];
     va_list ap;
     //uint64_t time_now = capture_time (c); // we want it in nano-seconds
     uint64_t time_now = capture_time (c) / 1000; // we want it in useconds
-    static uint64_t last_time = -1;
+    static uint64_t last_time = -1, first_time = 0;
 
     va_start (ap, msg);
     vsnprintf (buffer, 1024, msg, ap);
     va_end (ap);
     buffer[1023] = '\0';
 
+#if 0
     printf ("[%10.10lld] ", time_now);
+#endif
+    if (first_capture && !first_time)
+	first_time = capture_time(first_capture) / 1000;
+    printf ("[%10.10lld] ", time_now - first_time);
+
+
     if (last_time != -1)
 	printf ("[%8.8lld] ", time_now - last_time);
     else

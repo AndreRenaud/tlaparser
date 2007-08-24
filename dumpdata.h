@@ -109,5 +109,7 @@ int time_log (capture *c, char *msg, ...);
 
 void display_data_buffer (unsigned char *buffer, int len, int ebcdic);
 
+extern capture *first_capture;
+
 #endif
 
