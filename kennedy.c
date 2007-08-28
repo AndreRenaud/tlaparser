@@ -8,11 +8,18 @@ static unsigned int get_ftrd (capture *c, list_t *channels)
     char name[200];
     unsigned int retval = 0;
     int i;
+    static channel_info *ftrd[8] = {NULL};
+
+    if (!ftrd[0])
+	for (i = 0; i < 8; i++)
+	{
+	    sprintf (name, "FTRD%d", i);
+	    ftrd[i] = capture_channel_details (c, name, channels);
+	}
 
     for (i = 0; i < 8; i++)
     {
-	sprintf (name, "FTRD%d", i);
-	retval |= capture_bit_name (c, name, channels) ? 0 : 1 << i;
+	retval |= capture_bit (c, ftrd[i]) ? 0 : 1 << i;
     }
 #warning "Ignoring parity"
 
@@ -24,11 +31,21 @@ static unsigned int get_cis (capture *c, list_t *channels)
     char name[200];
     unsigned int retval = 0;
     int i;
+    static channel_info *cis[13] = {NULL};
+
+    if (!cis[0])
+    {
+	for (i = 0; i < 13; i++)
+	{
+	    sprintf (name, "CIS%d", i);
+	    cis[i] = capture_channel_details (c, name, channels);
+	}
+    }
+
 
     for (i = 0; i < 13; i++)
     {
-	sprintf (name, "CIS%d", i);
-	retval |= capture_bit_name (c, name, channels) ? 0 : 1 << i;
+	retval |= capture_bit (c, cis[i]) ? 0 : 1 << i;
     }
 
     return retval;
@@ -38,10 +55,12 @@ static int decode_command (int command, char *buffer)
 {
     int written = 0;
     const char *density[] = {"???", "1600/200", "556", "800"};
+    const char *commands4[] = {"Odd", "Event"};
     const char *commands56[] = {"", "Read", "Write", "Search Forward File"};
     const char *commands7[] = {"", "Write EOF"};
     const char *commands89[] = {"", "Backspace", "Rewind", "Backspace File"};
     const char *commands10[] = {"", "Erase"};
+    const char *commands11[] = {"", "Read/Reverse"};
     const char *commands12[] = {"", "Search Forward"};
 
     written += sprintf (buffer + written, "Trans: %d ", command & 0x3);
@@ -52,6 +71,7 @@ static int decode_command (int command, char *buffer)
     written += sprintf (buffer + written, " %s", commands7[(command >> 7) & 1]);
     written += sprintf (buffer + written, " %s", commands89[(command >> 8) & 3]);
     written += sprintf (buffer + written, " %s", commands10[(command >> 10) & 1]);
+    written += sprintf (buffer + written, " %s", commands11[(command >> 11) & 1]);
     written += sprintf (buffer + written, " %s", commands12[(command >> 12) & 1]);
 
     return written;
@@ -76,6 +96,9 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
     static unsigned char buffer[100000];
     static int buffer_pos = 0;
     static unsigned int is_writing = 0;
+    static int command_count = 0;
+
+    int ebcdic = option_set ("ebcdic");
 
     if (pa.init == -1)
     {
@@ -91,18 +114,24 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
     if (!prev) // need it to detect edges
 	goto done;
 
+    if (capture_bit (c, pa.ffbusy) &&
+	(capture_bit (c, pa.fwclk) != capture_bit (prev, pa.fwclk) ||
+	 capture_bit (c, pa.frclk) != capture_bit (prev, pa.frclk) ||
+	 capture_bit (c, pa.cdavl) != capture_bit (prev, pa.cdavl)))
+	time_log (c, "ARGH: clock transition, but not busy\n");
+
     if (capture_bit_transition (c, prev, pa.fwclk, TRANSITION_low_to_high))
     {
 	if (!is_writing)
 	    time_log (c, "ARGH: FWCLK transition, but not writing\n");
 	if (capture_bit (c, pa.cdavl))
 	{
-	    display_data_buffer (buffer, buffer_pos, 0);
+	    display_data_buffer (buffer, buffer_pos, ebcdic);
 	    buffer_pos = 0;
 	}
 	else
 	{
-	    int data = (~get_cis (c, channels)) & 0xff;
+	    int data = get_cis (c, channels) & 0xff;
 	    //time_log (c, "Got data: 0x%x\n", data);
 	    buffer[buffer_pos++] = data;
 	}
@@ -117,7 +146,7 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
 
     if (!is_writing && buffer_pos > 0 && capture_bit (c, pa.ffbusy))
     {
-	display_data_buffer (buffer, buffer_pos, 0);
+	display_data_buffer (buffer, buffer_pos, ebcdic);
 	buffer_pos = 0;
     }
 
@@ -131,13 +160,15 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
 	unsigned int cmd = get_cis (c, channels);
 	char command_string[200];
 	int type = (cmd & (0x3 << 5)) >> 5;
+
+	command_count++;
 	decode_command (cmd, command_string);
-	time_log (c, "CMD: 0x%x: %s\n", cmd, command_string);
+	time_log (c, "[%d] CMD: 0x%x: %s\n", command_count, cmd, command_string);
 
 	if (buffer_pos)
 	{
 	    time_log (c, "ARGH: Got command, but outstanding data\n");
-	    display_data_buffer (buffer, buffer_pos, 0);
+	    display_data_buffer (buffer, buffer_pos, ebcdic);
 	}
 
 
@@ -152,7 +183,7 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
     if (buffer_pos >= sizeof (buffer))
     {
 	time_log (c, "ARGH: BUFFER TOO LARGE\n");
-	display_data_buffer (buffer, buffer_pos, 0);
+	display_data_buffer (buffer, buffer_pos, ebcdic);
 	buffer_pos = 0;
     }
 
