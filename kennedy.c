@@ -87,6 +87,8 @@ struct pin_assignments
     channel_info *frclk;
     channel_info *ffbusy;
     channel_info *ffmkd;
+    channel_info *feotp;
+    channel_info *crest;
 };
 
 static void parse_kennedy_cap (capture *c, list_t *channels)
@@ -109,6 +111,8 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
 	pa.frclk = capture_channel_details (c, "frclk", channels);
 	pa.ffbusy = capture_channel_details (c, "ffbusy", channels);
 	pa.ffmkd = capture_channel_details (c, "ffmkd", channels);
+	pa.feotp = capture_channel_details (c, "feotp", channels);
+	pa.crest = capture_channel_details (c, "crest", channels);
     }
 
     if (!prev) // need it to detect edges
@@ -151,9 +155,13 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
     }
 
     if (capture_bit_transition (c, prev, pa.ffmkd, TRANSITION_low_to_high))
-    {
 	time_log (c, "Filemark\n");
-    }
+
+    if (capture_bit (c, pa.feotp) != capture_bit (prev, pa.feotp))
+	time_log (c, "EOT: %s\n", capture_bit (c, pa.feotp) ? "Inactive" : "Active");
+
+    if (capture_bit_transition (c, prev, pa.crest, TRANSITION_high_to_low))
+        time_log (c, "Reset\n");
 
     if (capture_bit_transition (c, prev, pa.cccom, TRANSITION_low_to_high))
     {
