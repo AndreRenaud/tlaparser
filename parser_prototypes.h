@@ -1,15 +1,15 @@
 #ifndef PARSERS_H
 #define PARSERS_H
 
-typedef void (*parser_function)(list_t *cap, char *filename, list_t *channels);
+typedef void (*parser_function)(bulk_capture *cap, char *filename, list_t *channels);
 
-void parse_61k (list_t *cap, char *filename, list_t *channels);
-void parse_8250 (list_t *cap, char *filename, list_t *channels);
-void parse_kennedy (list_t *cap, char *filename, list_t *channels);
-void parse_pertec (list_t *cap, char *filename, list_t *channels);
-void parse_scsi (list_t *cap, char *filename, list_t *channels);
-void parse_xd (list_t *cap, char *filename, list_t *channels);
-void parse_pci (list_t *cap, char *filename, list_t *channels);
+void parse_61k (bulk_capture *cap, char *filename, list_t *channels);
+void parse_8250 (bulk_capture *cap, char *filename, list_t *channels);
+void parse_kennedy (bulk_capture *cap, char *filename, list_t *channels);
+void parse_pertec (bulk_capture *cap, char *filename, list_t *channels);
+void parse_scsi (bulk_capture *cap, char *filename, list_t *channels);
+void parse_xd (bulk_capture *cap, char *filename, list_t *channels);
+void parse_pci (bulk_capture *cap, char *filename, list_t *channels);
 
 #endif
 

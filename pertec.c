@@ -284,24 +284,10 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     prev = c;
 }
 
-static void parse_pertec_bulk_cap (bulk_capture *b, list_t *channels)
+void parse_pertec (bulk_capture *b, char *filename, list_t *channels)
 {
     int i;
     capture *c;
-
-    c = b->data;
-
-    for (i = 0; i < b->length / sizeof (capture); i++)
-    {
-	parse_pertec_cap (c, channels);
-	c++;
-    }
-}
-
-void parse_pertec (list_t *cap, char *filename, list_t *channels)
-{
-    list_t *n;
-    int i;
     char idbuf[100];
 
     if (option_val ("pertecid", idbuf, 100))
@@ -311,9 +297,11 @@ void parse_pertec (list_t *cap, char *filename, list_t *channels)
 
     printf ("Pertec analysis of file: '%s', using ID %d\n", filename, pertec_id);
 
-    for (n = cap, i = 0; n != NULL; n = n->next, i++)
+    c = b->data;
+
+    for (i = 0; i < b->length / sizeof (capture); i++)
     {
-	printf ("Parsing capture block %d\n", i);
-	parse_pertec_bulk_cap (n->data, channels);
+	parse_pertec_cap (c, channels);
+	c++;
     }
 }

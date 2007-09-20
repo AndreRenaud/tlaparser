@@ -4,6 +4,7 @@
 
 #include "dumpdata.h"
 #include "common.h"
+#include "parser_prototypes.h"
 
 struct pin_assignments {
     int init;
@@ -111,7 +112,7 @@ static void pci_dump_buffer(capture *c)
     printf("\n");
 }
 
-void pci_update_clock_hold(capture *c)
+static void pci_update_clock_hold(capture *c)
 {
     /* 
      * If the clock hasn't changed, keep track of how long it hasn't changed for.
@@ -220,10 +221,12 @@ static void parse_pci_capture(capture *c, list_t *channels, int last)
     pci_update_on_clock(c);
 }
 
-static void parse_pci_bulk_capture(bulk_capture * b, list_t * channels)
+void parse_pci (bulk_capture * b, char *filename, list_t * channels)
 {
     int i;
     capture *c;
+
+    fprintf(stderr, "PCI analysis of file: '%s'\n", filename);
 
     c = b->data;
 
@@ -258,18 +261,5 @@ static void parse_pci_bulk_capture(bulk_capture * b, list_t * channels)
 	parse_pci_capture(c, channels,
 			  i == (b->length / sizeof(capture)) - 1);
 	c++;
-    }
-}
-
-void parse_pci(list_t * cap, char *filename, list_t * channels)
-{
-    list_t *n;
-    int i;
-
-    fprintf(stderr, "PCI analysis of file: '%s'\n", filename);
-
-    for (n = cap, i = 0; n != NULL; n = n->next, i++) {
-	fprintf(stderr, "Parsing capture block %d\n", i);
-	parse_pci_bulk_capture(n->data, channels);
     }
 }

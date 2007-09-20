@@ -297,10 +297,16 @@ out:
     prev = c;
 }
 
-static void parse_scsi_bulk_cap (bulk_capture *b, list_t *channels)
+void parse_scsi (bulk_capture *b, char *filename, list_t *channels)
 {
     int i;
     capture *c;
+    char buffer[100];
+
+    printf ("SCSI analysis of file: '%s'\n", filename);
+
+    if (option_val ("device", buffer, 10))
+	active_device = strtoul (buffer, NULL, 0);
 
     c = b->data;
 
@@ -309,23 +315,4 @@ static void parse_scsi_bulk_cap (bulk_capture *b, list_t *channels)
 	parse_scsi_cap (c, channels, i == (b->length / sizeof (capture)) - 1);
 	c++;
     }
-}
-
-void parse_scsi (list_t *cap, char *filename, list_t *channels)
-{
-    list_t *n;
-    int i;
-    char buffer[10];
-
-    printf ("SCSI analysis of file: '%s'\n", filename);
-
-    if (option_val ("device", buffer, 10))
-	active_device = strtoul (buffer, NULL, 0);
-
-    for (n = cap, i = 0; n != NULL; n = n->next, i++)
-    {
-	printf ("Parsing capture block %d\n", i);
-	parse_scsi_bulk_cap (n->data, channels);
-    }
-
 }

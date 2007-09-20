@@ -149,10 +149,12 @@ done:
     prev = c;
 }
 
-static void parse_61k_bulk_cap (bulk_capture *b, list_t *channels)
+void parse_61k (bulk_capture *b, char *filename, list_t *channels)
 {
     int i;
     capture *c;
+
+    printf ("61K analysis of file: '%s'\n", filename);
 
     c = b->data;
 
@@ -163,18 +165,4 @@ static void parse_61k_bulk_cap (bulk_capture *b, list_t *channels)
     }
 
     printf ("Parsed %d captures\n", b->length / sizeof (capture));
-}
-
-void parse_61k (list_t *cap, char *filename, list_t *channels)
-{
-    list_t *n;
-    int i;
-
-    printf ("61K analysis of file: '%s'\n", filename);
-
-    for (n = cap, i = 0; n != NULL; n = n->next, i++)
-    {
-	printf ("Parsing capture block %d\n", i);
-	parse_61k_bulk_cap (n->data, channels);
-    }
 }

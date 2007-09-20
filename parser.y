@@ -140,7 +140,7 @@ number: t_NUMBER;
 
 ident:   t_IDENT;
 %%
-list_t *load_capture (char *filename)
+bulk_capture *load_capture (char *filename)
 {
     list_t *cap;
     off_t len;
@@ -182,6 +182,6 @@ list_t *load_capture (char *filename)
 	return NULL;
     }
 
-    return cap;
+    return cap ? cap->data : NULL;
 }
 

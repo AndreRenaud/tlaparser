@@ -25,7 +25,7 @@ static void add_group (char *name, char *members)
 #warning "Not doing anything with the group information at this stage"
 }
 
-list_t *tla_parse_file (char *file_name)
+bulk_capture *tla_parse_file (char *file_name)
 {
     regex_t channel, group_start, group_members, data_set, data_set_group, cafc_long_cell;
     char buffer[1024];
@@ -145,7 +145,7 @@ list_t *tla_parse_file (char *file_name)
 
     fclose (fp);
 
-    return list_prepend (NULL, retval);
+    return retval;
 }
 
 #if 0

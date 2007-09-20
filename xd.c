@@ -146,12 +146,13 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
     }
 }
 
-static void parse_xd_bulk_cap (bulk_capture *b, list_t *channels)
+void parse_xd (bulk_capture *b, char *filename, list_t *channels)
 {
     int i;
     capture *c, *prev = NULL;
 
-    //c = (capture *)(b+1);//(char *)b+sizeof (bulk_capture);
+    printf ("xD analysis of file: '%s'\n", filename);
+
     c = b->data;
 
     for (i = 0; i < b->length / sizeof (capture); i++)
@@ -162,18 +163,4 @@ static void parse_xd_bulk_cap (bulk_capture *b, list_t *channels)
     }
 
     printf ("Parsed %d captures\n", b->length / sizeof (capture));
-}
-
-void parse_xd (list_t *cap, char *filename, list_t *channels)
-{
-    list_t *n;
-    int i;
-
-    printf ("xD analysis of file: '%s'\n", filename);
-
-    for (n = cap, i = 0; n != NULL; n = n->next, i++)
-    {
-	printf ("Parsing capture block %d\n", i);
-	parse_xd_bulk_cap (n->data, channels);
-    }
 }
