@@ -151,7 +151,6 @@ bulk_capture *tla_parse_file (char *file_name)
 #if 0
 int main (int argc, char *argv[])
 {
-    FILE *fp;
 
     if (argc < 2)
     {
@@ -159,15 +158,7 @@ int main (int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    if ((fp = fopen (argv[1], "r")) == NULL)
-    {
-        perror ("Cannot open tla file");
-        return EXIT_FAILURE;
-    }
-
-    tla_parse_file (fp);
-
-    fclose (fp);
+    tla_parse_file (argv[1]);
 
     return EXIT_SUCCESS;
 }

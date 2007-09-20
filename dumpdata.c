@@ -404,7 +404,7 @@ bulk_capture *build_dump (void *data, int length)
    return retval;
  }
 
-capture *first_capture;
+capture *first_capture = NULL;
 int time_log (capture *c, char *msg, ...)
 {
     char buffer[1024];
