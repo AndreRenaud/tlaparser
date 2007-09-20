@@ -74,8 +74,6 @@ uint64_t capture_time (capture *c);
 bulk_capture *build_dump (void *data, int length);
 channel_info *build_channel (char *probe, char *name, int inverted);
 
-int capture_compare (list_t *data1, list_t *data2, char *file1, char *file2);
-
 int time_log (capture *c, char *msg, ...);
 
 void display_data_buffer (unsigned char *buffer, int len, int ebcdic);
