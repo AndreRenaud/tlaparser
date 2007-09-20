@@ -72,6 +72,29 @@ void dump_capture (bulk_capture *b, char *name, list_t *channels)
    }
 }
 
+static const char *index_to_name (int index)
+{
+#if CAPTURE_DATA_BYTES == 18
+    const char *probe_index[] = {"E0", "A3", "A2", "D3", /* 0 - 3 */
+				 "E3", "E2", "E1", "D2", /* 4 - 7 */
+				 "A1", "A0", "D1", "D0", /* 8 - 11 */
+				 "C3", "C2", "C1", "C0", /* 12 - 15 */
+    };
+#elif CAPTURE_DATA_BYTES == 14
+    const char *probe_index[] = {NULL, NULL, NULL, NULL, /* 0 - 3 */
+				 NULL, NULL, "D1", "D0", /* 4 - 7 */
+				 "C3", "C2", "C1", "C0", /* 8 - 11 */
+    };
+#else
+#error "Don't know the probe layout for this analyser"
+#endif
+
+    if (index < 0 || index >= (sizeof (probe_index) / sizeof (probe_index[0])))
+        return NULL;
+
+    return probe_index[index];
+}
+
 void dump_changing_channels (bulk_capture *bc, char *name, list_t *channels)
 {
     uint8_t changes[CAPTURE_DATA_BYTES];
@@ -100,6 +123,9 @@ void dump_changing_channels (bulk_capture *bc, char *name, list_t *channels)
     }
 
     printf ("Changed bits on '%s'\n", name);
+    for (b = 0; b < CAPTURE_DATA_BYTES; b++)
+        printf (" %s  ", index_to_name (b) ?  : "UK");
+    printf ("\n");
     for (b = 0; b < CAPTURE_DATA_BYTES; b++)
 	printf ("0x%2.2x ", changes[b]);
     printf ("\n");
@@ -232,25 +258,15 @@ static int name_to_index (const char *probe_name)
 {
 #warning "Using vaguelly guessed table to convert names to probe indicies"
     int i;
-#if CAPTURE_DATA_BYTES == 18
-    const char *probe_index[] = {"E0", "A3", "A2", "D3", /* 0 - 3 */
-				 "E3", "E2", "E1", "D2", /* 4 - 7 */
-				 "A1", "A0", "D1", "D0", /* 8 - 11 */
-				 "C3", "C2", "C1", "C0", /* 12 - 15 */
-#elif CAPTURE_DATA_BYTES == 14
-    const char *probe_index[] = {NULL, NULL, NULL, NULL, /* 0 - 3 */
-				 NULL, NULL, "D1", "D0", /* 4 - 7 */
-				 "C3", "C2", "C1", "C0", /* 8 - 11 */
-#else
-#error "Don't know the probe layout for this analyser"
-#endif
 
-    };
 #define NPROBES (CAPTURE_DATA_BYTES - 2) // 2 of them are clocks, which we don't care about
 
     for (i = 0; i < NPROBES; i++)
-	if (probe_index[i] && strncmp (probe_index[i], probe_name, 2) == 0)
+    {
+        const char *probe = index_to_name (i);
+	if (probe && strncmp (probe, probe_name, 2) == 0)
 	    return i;
+    }
     fprintf (stderr, "Could not determine index for probe '%s'\n", probe_name);
     return 0;
 }
