@@ -6,7 +6,6 @@
 
 #include "common.h"
 #include "dumpdata.h"
-#include "parser.h"
 #include "parser_prototypes.h"
 
 extern FILE *yyin;
