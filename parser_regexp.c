@@ -42,6 +42,8 @@ bulk_capture *tla_parse_file (char *file_name)
         return NULL;
     }
 
+    /* All the fancy regexps to identify the relevant parts of a .tla file
+     */
     regcomp (&channel, "CjmChannel \"([[:alnum:][:punct:]]+)\" \"\\$([[:alnum:][:punct:]]+)\\$\"", REG_EXTENDED);
     regcomp (&group_start, "CjmChannelGroup \"([[:alnum:][:punct:]]+)\" \"\\$([[:alnum:][:punct:]]+)\\$\"", REG_EXTENDED);
     regcomp (&group_members, "CafcStringCell \"ClaGroupDefinition\" \"\\$\\$\" = \\{ \"([[:alnum:][:punct:]]+)\"[[:space:]]*\\}", REG_EXTENDED);
