@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "dumpdata.h"
 #include "lists.h"
@@ -139,3 +140,48 @@ number: t_NUMBER;
 
 ident:   t_IDENT;
 %%
+list_t *load_capture (char *filename)
+{
+    list_t *cap;
+    off_t len;
+    char *buf;
+    
+    fprintf (stderr, "About to load %s\n", filename);
+
+    yyin = fopen (filename, "r");
+    if (!yyin)
+    {
+	fprintf (stderr, "Unable to open '%s': %s\n", filename, strerror (errno));
+	return NULL;
+    }
+    fseeko (yyin, 0, SEEK_END);
+    len = ftello (yyin);
+    fseeko (yyin, 0, SEEK_SET);
+    if (len >= MAX_DATA_LEN)
+    {
+	fclose (yyin);
+	fprintf (stderr, "File too large: %s - increase MAX_DATA_LEN\n", filename);
+	return NULL;
+    }
+    buf = malloc (10 * 1024 * 1024);
+
+    setvbuf (yyin, buf, _IOFBF, 10 * 1024 * 1024);
+
+    nprobes = 0;
+    yyparse ();
+    cap = final_capture;
+    fclose (yyin);
+    free (buf);
+    yyin = NULL;
+
+    // each probe needs 2 bytes, plus the 2 bytes for the clocking lines
+    if (nprobes * 2 + 2 != CAPTURE_DATA_BYTES)
+    {
+	fprintf (stderr, "Probes doesn't line up with CAPTURE_DATA_BYTES (%d, %d)\n", nprobes, CAPTURE_DATA_BYTES);
+	fprintf (stderr, "Possibly setup for incorrect scope\n");
+	return NULL;
+    }
+
+    return cap;
+}
+

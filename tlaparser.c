@@ -45,12 +45,12 @@ static void usage (char *prog)
 	printf ("\t-%c	    : %s\n", parsers[i].code, parsers[i].description);
 }
 
-static list_t *load_capture (char *filename)
+#if 0
+list_t *load_capture (char *filename)
 {
     list_t *cap;
     off_t len;
     char *buf;
-
     
     fprintf (stderr, "About to load %s\n", filename);
 
@@ -90,6 +90,7 @@ static list_t *load_capture (char *filename)
 
     return cap;
 }
+#endif
 
 static char *options = NULL;
 
@@ -211,7 +212,8 @@ int main (int argc, char *argv[])
 	return (EXIT_FAILURE);
     }
 
-    cap = load_capture (file);
+    //cap = load_capture (file);
+    cap = tla_parse_file (file);
 
     if (list_channels)
 	dump_channel_list (final_channels);

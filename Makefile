@@ -3,7 +3,13 @@ LDFLAGS=
 BISON=bison
 FLEX=flex
 
-OBJECTS=tlaparser.o parser.o lexer.o dumpdata.o lists.o
+OBJECTS=tlaparser.o dumpdata.o lists.o
+
+# Bison/Flex one - don't use, crappy
+#OBJECTS+=parser.o lexer.o 
+# Regexp one - nice & fast & simple
+OBJECTS+=parser_regexp.o
+
 HEADERS=*.h
 GENERATED=parser.c parser.h lexer.c parser.output
 
