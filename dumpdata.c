@@ -43,24 +43,6 @@ uint64_t capture_time (capture *c)
     return (t << 32 | b) / 8;
 }
 
-int dump_capture (bulk_capture *b)
-{
-   int i;
-   capture *c, *prev = NULL;
-
-   c = b->data;
-
-   //printf ("Capture Group: %p\n", b);
-   for (i = 0; i < b->length / sizeof (capture); i++)
-   {
-      dump_single_capture (c, prev);
-      prev = c;
-      c++;
-   }
-
-   return 0;
-}
-
 void dump_channel_list (list_t *channels)
 {
     list_t *n;
@@ -71,57 +53,52 @@ void dump_channel_list (list_t *channels)
     }
 }
 
-void dump_capture_list (list_t *cap, char *name, list_t *channels)
+void dump_capture (bulk_capture *b, char *name, list_t *channels)
 {
-    list_t *n;
+   int i;
+   capture *c, *prev = NULL;
 
-    printf ("Capture '%s'\n", name);
-    dump_channel_list (channels);
+   printf ("Capture '%s'\n", name);
+   dump_channel_list (channels);
 
-    for (n = cap; n != NULL; n = n->next)
-    {
-	int i;
-	printf ("Capture item: %p\n", n);
-	printf ("time       ");
-	for (i = 0; i < CAPTURE_DATA_BYTES; i++)
-	    printf ("%2.2d ", i);
-	printf ("\n");
-	dump_capture (n->data);
-    }
+   c = b->data;
+
+   //printf ("Capture Group: %p\n", b);
+   for (i = 0; i < b->length / sizeof (capture); i++)
+   {
+      dump_single_capture (c, prev);
+      prev = c;
+      c++;
+   }
 }
 
-void dump_changing_channels (list_t *cap, char *name, list_t *channels)
+void dump_changing_channels (bulk_capture *bc, char *name, list_t *channels)
 {
-    list_t *n;
     uint8_t changes[CAPTURE_DATA_BYTES];
     int b;
+    int i;
+    capture *c, *prev = NULL;
+
     for (b = 0; b < CAPTURE_DATA_BYTES; b++)
 	changes[b] = 0;
 
-    for (n = cap; n != NULL; n = n->next)
+    c = bc->data;
+
+    //printf ("Capture Group: %p\n", b);
+    for (i = 0; i < bc->length / sizeof (capture); i++)
     {
-	int i;
-	bulk_capture *bc = n->data;
-	capture *c, *prev = NULL;
+        if (prev)
+        {
+            for (b = 0; b < CAPTURE_DATA_BYTES; b++)
+            {
+                changes[b] |= c->data[b] ^ prev->data[b];
+            }
+        }
 
-	c = bc->data;
-
-	//printf ("Capture Group: %p\n", b);
-	for (i = 0; i < bc->length / sizeof (capture); i++)
-	{
-	    if (prev)
-	    {
-		for (b = 0; b < CAPTURE_DATA_BYTES; b++)
-		{
-		    changes[b] |= c->data[b] ^ prev->data[b];
-		}
-	    }
-
-	    prev = c;
-	    c++;
-	}
-
+        prev = c;
+        c++;
     }
+
     printf ("Changed bits on '%s'\n", name);
     for (b = 0; b < CAPTURE_DATA_BYTES; b++)
 	printf ("0x%2.2x ", changes[b]);
@@ -269,7 +246,7 @@ static int name_to_index (const char *probe_name)
 #endif
 
     };
-#define NPROBES (sizeof (probe_index) / sizeof (probe_index[0]))
+#define NPROBES (CAPTURE_DATA_BYTES - 2) // 2 of them are clocks, which we don't care about
 
     for (i = 0; i < NPROBES; i++)
 	if (probe_index[i] && strncmp (probe_index[i], probe_name, 2) == 0)

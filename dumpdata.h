@@ -45,10 +45,9 @@ typedef struct
     int inverted;
 } channel_info;
 
-int dump_capture (bulk_capture *c);
-void dump_capture_list (list_t *capture, char *name, list_t *channels);
+void dump_capture (bulk_capture *cap, char *name, list_t *channels);
 void dump_channel_list (list_t *channels);
-void dump_changing_channels (list_t *cap, char *name, list_t *channels);
+void dump_changing_channels (bulk_capture *cap, char *name, list_t *channels);
 
 /* Returns the channel with name 'channel_name'
  * Useful to speed things up so we don't continually do the same searches
@@ -82,6 +81,8 @@ int time_log (capture *c, char *msg, ...);
 void display_data_buffer (unsigned char *buffer, int len, int ebcdic);
 
 extern capture *first_capture;
+
+bulk_capture *tla_parse_file (char *filename);
 
 #endif
 

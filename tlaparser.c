@@ -173,7 +173,7 @@ int main (int argc, char *argv[])
 	dump_changing_channels (cap, file, final_channels);
 
     if (dump)
-	dump_capture_list (cap, file, final_channels);
+	dump_capture (cap, file, final_channels);
 
     if (parse_func >= 0)
 	parsers[parse_func].func (cap, file, final_channels);
