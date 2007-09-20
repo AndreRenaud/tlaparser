@@ -45,31 +45,6 @@ typedef struct
     int inverted;
 } channel_info;
 
-typedef struct
-{
-   list_t *data;
-   char filename[100];
-   bulk_capture *current;
-
-   capture *current_cap;
-
-   uint32_t prev;
-   uint32_t val;
-   uint32_t diff;
-   uint32_t byte;
-
-   uint32_t type;
-
-   uint32_t command_count;
-   uint32_t data_count;
-
-   uint32_t finished;
-
-   uint8_t buffer[MAX_DATA_TRANSFER];
-   uint32_t buff_size;
-
-} stream_info_t;
-
 int dump_capture (bulk_capture *c);
 void dump_capture_list (list_t *capture, char *name, list_t *channels);
 void dump_channel_list (list_t *channels);
@@ -101,9 +76,6 @@ bulk_capture *build_dump (void *data, int length);
 channel_info *build_channel (char *probe, char *name, int inverted);
 
 int capture_compare (list_t *data1, list_t *data2, char *file1, char *file2);
-
-stream_info_t *build_stream_info (list_t *data, char *filename);
-void compare_streams (stream_info_t *s1, stream_info_t *s2);
 
 int time_log (capture *c, char *msg, ...);
 
