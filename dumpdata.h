@@ -77,6 +77,7 @@ channel_info *build_channel (char *probe, char *name, int inverted);
 int time_log (capture *c, char *msg, ...);
 
 void display_data_buffer (unsigned char *buffer, int len, int ebcdic);
+void display_dual_data_buffer (unsigned char *buff1, int len1, unsigned char *buff2, int len2);
 
 extern capture *first_capture;
 

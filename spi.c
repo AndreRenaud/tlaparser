@@ -41,13 +41,6 @@ static int sst_cmd_want_addr (int cmd)
     }
 }
 
-static uint8_t printable_char (unsigned char data)
-{
-    if (data >= ' ' && data <= 126)
-        return data;
-    return '.';
-}
-
 static void decode_frame (unsigned char *in_data, unsigned char *out_data, int len)
 {
     int i;
@@ -65,6 +58,8 @@ static void decode_frame (unsigned char *in_data, unsigned char *out_data, int l
     pos++;
 
     if (sst_cmd_want_addr (cmd)) {
+        if (len < 4)
+            printf ("got command that wants an address, but no address supplied (%d len)\n", len);
         addr = out_data[1] << 16;
         addr |= out_data[2] << 8;
         addr |= out_data[3];
@@ -72,10 +67,7 @@ static void decode_frame (unsigned char *in_data, unsigned char *out_data, int l
         printf ("addr: 0x%x\n", addr);
     }
 
-    for (i = pos; i < len; i++) {
-        printf ("%2.2x (%c) %2.2x (%c)\n", in_data[i], printable_char (in_data[i]), 
-                out_data[i], printable_char (out_data[i]));
-    }
+    display_dual_data_buffer (&in_data[pos], len - pos, &out_data[pos], len - pos);
 }
 
 struct pin_assignments
@@ -94,6 +86,8 @@ static void parse_spi_cap (capture *c, capture *prev, list_t *channels)
     static int bits;
     static unsigned char in_data[1024];
     static unsigned char out_data[1024];
+    static int frame_count = 0;
+    static int frame_start;
 
     if (pa.init == -1) {
         pa.init = 1;
@@ -107,18 +101,20 @@ static void parse_spi_cap (capture *c, capture *prev, list_t *channels)
         return;
 
     if (capture_bit_transition (c, prev, pa.sfrm, TRANSITION_high_to_low)) {
-        time_log (c, "Start of frame\n");
+        time_log (c, "Start of frame %d\n", frame_count++);
         in_frame = 1;
         bits = 0;
         memset (out_data, 0, sizeof (out_data));
         memset (in_data, 0, sizeof (in_data));
+        frame_start = capture_time (c);
     }
 
     if (capture_bit_transition (c, prev, pa.sfrm, TRANSITION_low_to_high)) {
         if (bits % 8)
             time_log (c, "Finished a frame, but the number if bits isn't divisible by 8: %d", bits);
         decode_frame (in_data, out_data, bits / 8);
-        time_log (c, "End of frame\n");
+        time_log (c, "End of frame [%dus]\n", 
+                (capture_time (c) - frame_start) / 1000);
         in_frame = 0;
     }
 

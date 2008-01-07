@@ -507,3 +507,40 @@ void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
 	printf ("%*s'\n", (linelen - this_len), "");
     }
 }
+
+static void display_buffer_line (unsigned char *buff, int bufflen, int linelen)
+{
+    int j;
+
+    for (j = 0; j < bufflen; j++)
+        printf ("%2.2x ", buff[j]);
+
+    printf ("%*s'", (linelen - bufflen) * 3, "");
+    for (j = 0; j < bufflen; j++)
+        printf ("%c", printable_char (buff[j]));
+
+    printf ("%*s'", (linelen - bufflen), "");
+}
+
+void display_dual_data_buffer (unsigned char *buff1, int len1, unsigned char *buff2, int len2)
+{
+    int i;
+    int linelen = 8;
+    int maxlen = max(len1, len2);
+    
+    for (i = 0; i < maxlen; i+=linelen)
+    {
+	int this_len;
+	printf ("  %4.4x: ", i); 
+
+	this_len = max(min(linelen, len1 - i), 0);
+        display_buffer_line (&buff1[i], this_len, linelen);
+        printf (" | ");
+
+	this_len = max(min(linelen, len2 - i), 0);
+        display_buffer_line (&buff2[i], this_len, linelen);
+
+        printf ("\n");
+    }
+}
+
