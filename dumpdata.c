@@ -81,7 +81,7 @@ static const char *index_to_name (int index)
 				 "C3", "C2", "C1", "C0", /* 12 - 15 */
     };
 #elif CAPTURE_DATA_BYTES == 14
-    const char *probe_index[] = {NULL, NULL, NULL, NULL, /* 0 - 3 */
+    const char *probe_index[] = {NULL, NULL, "A0", NULL, /* 0 - 3 */
 				 NULL, NULL, "D1", "D0", /* 4 - 7 */
 				 "C3", "C2", "C1", "C0", /* 8 - 11 */
     };
