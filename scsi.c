@@ -4,6 +4,8 @@
 #include "dumpdata.h"
 #include "common.h"
 
+//#define HAVE_DBG_PINS
+
 static int active_device = -1;
 
 //  from pg 45 table 8 of scsi 2 spec, based on msg, c/d, i/o
@@ -149,7 +151,7 @@ static int get_data (capture *c, list_t *channels)
 	retval |= bit << i;
     }
 
-    par = capture_bit_name (c, "parity", channels);
+    par = capture_bit_name (c, "dbp", channels);
 
     if (par != parity (retval))
 	time_log (c, "parity error: 0x%x (par = %d, not %d)\n", retval, par, parity (retval));
@@ -166,7 +168,9 @@ struct pin_assignments
     channel_info *nreq;
     channel_info *nsel;
     channel_info *nrst;
+#ifdef HAVE_DBG_PINS
     channel_info *dbg[4];
+#endif
 };
 
 static void parse_scsi_cap (capture *c, list_t *channels, int last)
@@ -192,12 +196,14 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	pa.nsel = capture_channel_details (c, "nsel", channels);
 	pa.nrst = capture_channel_details (c, "nrst", channels);
 
+#ifdef HAVE_DBG_PINS
 	for (i = 0; i < 4; i++)
 	{
 	    char buffer[10];
 	    sprintf (buffer, "dbg%d", i);
 	    pa.dbg[i] = capture_channel_details (c, buffer, channels);
 	}
+#endif
     }
 
     if (!prev)
@@ -216,11 +222,13 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	current_device = ch;
     }
 
+#ifdef HAVE_DBG_PINS
     for (i = 0; i < 4; i++)
     {
 	if (capture_bit (c, pa.dbg[i]) != capture_bit (prev, pa.dbg[i]))
 	    time_log (c, "DBG %d change: %d\n", i, capture_bit (c, pa.dbg[i]));
     }
+#endif
 
     if (capture_bit (c, pa.nrst) != capture_bit (prev, pa.nrst))
 	time_log (c, "Bus reset %s\n", capture_bit (c, pa.nrst) ? "end" : "start");

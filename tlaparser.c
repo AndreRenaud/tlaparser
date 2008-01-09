@@ -170,6 +170,9 @@ int main (int argc, char *argv[])
     if (list_channels)
 	dump_channel_list (final_channels);
 
+    if (!cap)
+        return EXIT_FAILURE;
+
     if (changing)
 	dump_changing_channels (cap, file, final_channels);
 

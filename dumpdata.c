@@ -81,7 +81,7 @@ static const char *index_to_name (int index)
 				 "C3", "C2", "C1", "C0", /* 12 - 15 */
     };
 #elif CAPTURE_DATA_BYTES == 14
-    const char *probe_index[] = {NULL, NULL, "A0", NULL, /* 0 - 3 */
+    const char *probe_index[] = {"D2", NULL, "A0", "D3", /* 0 - 3 */
 				 NULL, NULL, "D1", "D0", /* 4 - 7 */
 				 "C3", "C2", "C1", "C0", /* 8 - 11 */
     };
@@ -367,6 +367,12 @@ bulk_capture *build_dump (void *data, int length)
    capture *c;
    int i;
    int nrecords = length / sizeof (capture);
+
+   if (length % sizeof (capture)) {
+       fprintf (stderr, "Data length isn't a whole multiple of capture size: %d %% %d = %d\n",
+       length, sizeof (capture), length % sizeof (capture));
+       return NULL;
+   }
 
    retval = malloc (sizeof (bulk_capture));
    retval->data = malloc (length);
