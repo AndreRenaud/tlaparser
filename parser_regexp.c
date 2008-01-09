@@ -128,6 +128,11 @@ bulk_capture *tla_parse_file (char *file_name)
             value = atoi (value_str);
             //log ("Cafccell: %s %d", cell_name, value);
 
+            if (strcmp (cell_name, "DaBytesPerSample") == 0 && !strstr (current_data_set, "HiRes"))
+                if (value != sizeof (capture))
+                    fprintf (stderr, "Warning: Capture sizes don't line up: %d != %d\n"
+                                     "Perhaps this TLA file is for a different logic analyser configuration?\n", 
+                                     value, sizeof (capture));
 #if 0
             if (strcmp (cell_name, "DaNumSamples") == 0)
                 log ("Num samples for '%s' is %d", current_data_set, value);
