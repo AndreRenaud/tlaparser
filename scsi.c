@@ -63,13 +63,17 @@ static struct scsi_cmd scsi_commands [] = {
     {"WRITE AND VERIFY", 0x2E}, 
     {"WRITE BUFFER", 0x3B}, 
     {"WRITE LONG", 0x3F}, 
-    {"WRITE SAME", 0x41}
+    {"WRITE SAME", 0x41},
+    {"Read block limits", 0x05},
 };
 #define SCSI_COMMAND_LEN (sizeof (scsi_commands) / sizeof (scsi_commands[0]))
 
 static char *scsi_command_name (int cmd)
 {
     int i;
+    if (cmd & 0x80)
+        return "Identify";
+
     for (i = 0; i < SCSI_COMMAND_LEN; i++)
 	if (scsi_commands[i].code == cmd)
 	    return scsi_commands[i].name;
@@ -94,12 +98,18 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 	case 2: // COMMAND
 	{
 	    int cmd = buf[0];
-	    printf ("\t%s\n", scsi_command_name (cmd));
+	    printf ("\t%s [%d 0x%x]\n", scsi_command_name (cmd), cmd, cmd);
 	    switch (cmd)
 	    {
 		case 0x08: // read
-		    printf (" address=0x%2.2x%2.2x len=0x%x", buf[2], buf[3], buf[4]);
+                {
+                    unsigned int len;
+		    //printf (" address=0x%2.2x%2.2x len=0x%x\n", 
+                            //buf[2], buf[3], buf[4]);
+                    len = buf[2] << 16 | buf[3] << 8 | buf[4];
+                    printf (" length=0x%x\n", len);
 		    break;
+                }
 
 		default:
 		    break;
@@ -175,17 +185,19 @@ struct pin_assignments
 
 static void parse_scsi_cap (capture *c, list_t *channels, int last)
 {
+    static struct pin_assignments pa = {-1};
     static capture *prev = NULL;
     static int last_phase = -1;
     static unsigned char buffer[1024];
     static int buffer_len = 0;
     static int current_device = -1;
     static int last_phase_command = -1;
+#if 0
     static int last_good_ack = 0;
-    static struct pin_assignments pa = {-1};
     static int outstanding_nreq = 0;
     static uint64_t last_nreq = 0;
     int i;
+#endif
 
     if (pa.init == -1 && c)
     {
@@ -258,6 +270,7 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
     // bsy is low, and nack goes from high to low
     if (!capture_bit (c, pa.nbsy) &&
 	capture_bit_transition (c, prev, pa.nack, TRANSITION_high_to_low))
+	//capture_bit_transition (c, prev, pa.nreq, TRANSITION_high_to_low))
     {
 	int phase = 0;
 	int ch;
