@@ -29,6 +29,9 @@ OBJECTS+=kennedy.o
 CFLAGS+=-DPARSE_SPI
 OBJECTS+=spi.o
 
+CFLAGS+=-DPARSE_NOR
+OBJECTS+=nor.o
+
 default: tlaparser
 
 %.o: %.c $(HEADERS)
