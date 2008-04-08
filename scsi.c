@@ -19,6 +19,8 @@ struct scsi_cmd
     int code;
 };
 
+#define INVERT(a) ((a) ? 0 : 1)
+
 static struct scsi_cmd scsi_commands [] = {
     {"CHANGE DEFINITION", 0x40}, 
     {"COMPARE", 0x39}, 
@@ -65,6 +67,9 @@ static struct scsi_cmd scsi_commands [] = {
     {"WRITE LONG", 0x3F}, 
     {"WRITE SAME", 0x41},
     {"Read block limits", 0x05},
+    {"Space", 0x11},
+    {"Write filemark", 0x10},
+    {"Mode Select", 0x15},
 };
 #define SCSI_COMMAND_LEN (sizeof (scsi_commands) / sizeof (scsi_commands[0]))
 
@@ -102,6 +107,7 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 	    switch (cmd)
 	    {
 		case 0x08: // read
+                case 0xa: // write
                 {
                     unsigned int len;
 		    //printf (" address=0x%2.2x%2.2x len=0x%x\n", 
@@ -111,6 +117,7 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 		    break;
                 }
 
+
 		default:
 		    break;
 	    }
@@ -118,12 +125,17 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 	}
 
 	case 6: // message out
+        case 7: // message in
 	{
 	    int cmd = buf[0];
 	    if (cmd & 0x80)
 		printf ("\tIdentify\n");
-	    else
-		printf ("\tUnknown command: %d\n", cmd);
+	    else {
+                switch (cmd) {
+                    case 0x04: printf ("\tDisconnect\n"); break;
+                    default: printf ("\tUnknown command: %d\n", cmd);
+                }
+            }
 	    break;
 	}
 
@@ -178,17 +190,38 @@ struct pin_assignments
     channel_info *nreq;
     channel_info *nsel;
     channel_info *nrst;
+    channel_info *nio;
 #ifdef HAVE_DBG_PINS
     channel_info *dbg[4];
 #endif
 };
+
+static int ffs (unsigned int val)
+{
+    int i;
+    for (i = 31; i >= 0; i--)
+        if (val & (1 << i))
+            return i;
+    return -1;
+}
+
+static void add_output_data (unsigned char ch)
+{
+    static FILE *fp = NULL;
+    if (!fp) 
+        if ((fp = fopen ("output.dat", "wb")) == NULL) {
+            perror ("Unable to open output.dat");
+            return;
+        }
+    fwrite (&ch, 1, 1, fp);
+}
 
 static void parse_scsi_cap (capture *c, list_t *channels, int last)
 {
     static struct pin_assignments pa = {-1};
     static capture *prev = NULL;
     static int last_phase = -1;
-    static unsigned char buffer[1024];
+    static unsigned char buffer[1024 * 1024];
     static int buffer_len = 0;
     static int current_device = -1;
     static int last_phase_command = -1;
@@ -207,13 +240,14 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	pa.nreq = capture_channel_details (c, "nreq", channels);
 	pa.nsel = capture_channel_details (c, "nsel", channels);
 	pa.nrst = capture_channel_details (c, "nrst", channels);
+	pa.nio = capture_channel_details (c, "nio", channels);
 
 #ifdef HAVE_DBG_PINS
 	for (i = 0; i < 4; i++)
 	{
-	    char buffer[10];
-	    sprintf (buffer, "dbg%d", i);
-	    pa.dbg[i] = capture_channel_details (c, buffer, channels);
+	    char dbgbuffer[10];
+	    sprintf (dbgbuffer, "dbg%d", i);
+	    pa.dbg[i] = capture_channel_details (c, dbgbuffer, channels);
 	}
 #endif
     }
@@ -221,16 +255,26 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
     if (!prev)
 	goto out;
 
-    if (capture_bit (c, pa.nbsy) && capture_bit (c, pa.nsel) && 
-	(!(capture_bit (prev, pa.nbsy) && capture_bit (prev, pa.nsel))))
-	time_log (c, "Bus free\n");
+    // rising edge of nbsy, with nsel high => bus free
+    if (capture_bit_transition (c, prev, pa.nbsy, TRANSITION_low_to_high) && 
+        capture_bit (c, pa.nsel)) {
+        if (current_device != -1) {
+            time_log (c, "Bus free\n");
+            current_device = -1;
+        }
+    }
  
-    // SEL went low -> high, device selection 
-    if (capture_bit_transition (c, prev, pa.nsel, TRANSITION_high_to_low))
+    // falling edge of nbsy, with nsel low => device selection
+    if (capture_bit_transition (c, prev, pa.nbsy, TRANSITION_high_to_low) &&
+        !capture_bit (c, pa.nsel))
     {
 	int ch = get_data (c, channels);
-	if (ch != current_device)
-	    time_log (c, "Selected device: 0x%2.2x\n", ch);
+	if (ch != current_device) {
+            int dev1 = ffs(ch);
+            int dev2 = ffs(ch & ~(1 << dev1));
+	    time_log (c, "Selected device: 0x%2.2x (dev1: %d dev2: %d)\n", 
+                    ch, dev1, dev2);
+        }
 	current_device = ch;
     }
 
@@ -246,7 +290,7 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 	time_log (c, "Bus reset %s\n", capture_bit (c, pa.nrst) ? "end" : "start");
 
     if (active_device != -1 && current_device != active_device)
-	return;
+        goto out;
 
 #if 0
     if (!capture_bit (c, pa.nreq) && capture_bit_transition (c, prev, pa.nack, TRANSITION_high_to_low))
@@ -267,9 +311,12 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
     }
 #endif
 
+    int nio = capture_bit (c, pa.nio);
     // bsy is low, and nack goes from high to low
     if (!capture_bit (c, pa.nbsy) &&
-	capture_bit_transition (c, prev, pa.nack, TRANSITION_high_to_low))
+	capture_bit_transition (c, prev, pa.nreq, 
+                    nio ? TRANSITION_low_to_high : TRANSITION_high_to_low))
+	//capture_bit_transition (c, prev, pa.nack, TRANSITION_high_to_low))
 	//capture_bit_transition (c, prev, pa.nreq, TRANSITION_high_to_low))
     {
 	int phase = 0;
@@ -294,6 +341,8 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last)
 
 	if (buffer_len == 0)
 	    time_log (c, "Data start\n");
+        if (phase == 1 && last_phase_command == 8) // read command, data_in
+            add_output_data (ch);
 	buffer[buffer_len] = ch;
 	buffer_len++;
 	if (buffer_len > sizeof (buffer))

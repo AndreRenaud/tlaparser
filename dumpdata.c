@@ -482,12 +482,17 @@ void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
 {
     int i,j;
     int linelen;
+#if 0
     const char *columns = getenv ("COLUMNS"); /* for some reason this doesn't work */
     int col = columns ? atoi (columns) : 80; /* Try to auto-adjust for terminal width */
 
     col -= 8; // line prefix
     col -= 4; // inter field stuff
     linelen = col / 7;
+#endif
+
+    //linelen = 8; // just do 8 across
+    linelen = 16;
     
     printf ("Data length: %d\n", len);
     for (i = 0; i < len; i+=linelen)
@@ -497,9 +502,11 @@ void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j]);
 
+#if 0
 	printf ("%*s| ", (linelen - this_len) * 3, "");
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j] ^ 0xff);
+#endif
 
 	printf ("%*s'", (linelen - this_len) * 3, "");
 	for (j = 0; j < this_len; j++)
