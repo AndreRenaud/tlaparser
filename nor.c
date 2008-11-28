@@ -4,6 +4,22 @@
 #include "dumpdata.h"
 #include "common.h"
 
+static int nor_addr (capture *c, list_t *channels)
+{
+    char name[20];
+    int bit;
+    int retval = 0;
+    int i;
+
+    for (i = 0; i < 16; i++) {
+        sprintf (name, "ma%d", i);
+        bit = capture_bit_name (c, name, channels) ? 1 : 0;
+        retval |= bit << i;
+    }
+
+    return retval;
+}
+
 static int nor_data (capture *c, list_t *channels)
 {
     char name[20];
@@ -45,11 +61,13 @@ static void parse_nor_cap (capture *c, capture *prev, list_t *channels)
     if (capture_bit (c, pa.cs) == 0) {
         if (capture_bit_transition (c, prev, pa.read, TRANSITION_low_to_high)) {
             unsigned int data = nor_data (c, channels);
-            time_log (c, "Read: 0x%x (0x%x)\n", data, data ^ 0xffff);
+            time_log (c, "Read: 0x%x (0x%x) Addr=0x%x\n", 
+                    data, data ^ 0xffff, nor_addr (c, channels));
         }
         if (capture_bit_transition (c, prev, pa.write, TRANSITION_low_to_high)) {
             unsigned int data = nor_data (c, channels);
-            time_log (c, "Write: 0x%x\n", data, data ^ 0xffff);
+            time_log (c, "Write: 0x%x (0x%x) Addr=0x%x\n", 
+                    data, data ^ 0xffff, nor_addr (c, channels));
         }
     }
 

@@ -30,6 +30,8 @@ struct parser_info parsers[] = {
     {parse_pci, 'P', "Parse PCI bus"},
     {parse_spi, 'S', "Parse SPI bus"},
     {parse_nor, 'n', "Parse NOR flash"},
+    {parse_dm9000, '9', "Parse DM9000"},
+    {parse_camera, 'c', "Parse Camera"},
 };
 #define NPARSERS (sizeof (parsers) / sizeof (parsers[0]))
 

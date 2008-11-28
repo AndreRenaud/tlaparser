@@ -12,6 +12,8 @@ void parse_xd (bulk_capture *cap, char *filename, list_t *channels);
 void parse_pci (bulk_capture *cap, char *filename, list_t *channels);
 void parse_spi (bulk_capture *b, char *filename, list_t *channels);
 void parse_nor (bulk_capture *b, char *filename, list_t *channels);
+void parse_dm9000 (bulk_capture *b, char *filename, list_t *channels);
+void parse_camera (bulk_capture *b, char *filename, list_t *channels);
 
 #endif
 

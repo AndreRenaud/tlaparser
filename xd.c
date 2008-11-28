@@ -3,6 +3,30 @@
 #include "dumpdata.h"
 #include "common.h"
 
+#if 0 // normal
+#define ALE_NAME "ale"
+#define CLE_NAME "cle"
+#define NCE_NAME "nce"
+#define DATA_PREFIX "d"
+#define NWE_NAME "nwe"
+#define NRE_NAME "nre"
+#elif 0 // marlin
+#define ALE_NAME "ale"
+#define CLE_NAME "cle"
+#define NCE_NAME "cen"
+#define DATA_PREFIX "md"
+#define NWE_NAME "nfweb"
+#define NRE_NAME "nfreb"
+#elif 1 // snapper9260
+#define ALE_NAME "ale"
+#define CLE_NAME "cle"
+#define NCE_NAME "ncs"
+#define DATA_PREFIX "d"
+#define NWE_NAME "nwe"
+#define NRE_NAME "nre"
+#endif
+
+
 static uint8_t printable_char (int data)
 {
     if (data >= ' ' && data <= 126)
@@ -13,14 +37,13 @@ static uint8_t printable_char (int data)
 static uint8_t xd_data (capture *c, list_t *channels)
 {
     uint8_t retval = 0;
-    retval |= (capture_bit_name (c, "d0", channels) ? 1 : 0) << 0;
-    retval |= (capture_bit_name (c, "d1", channels) ? 1 : 0) << 1;
-    retval |= (capture_bit_name (c, "d2", channels) ? 1 : 0) << 2;
-    retval |= (capture_bit_name (c, "d3", channels) ? 1 : 0) << 3;
-    retval |= (capture_bit_name (c, "d4", channels) ? 1 : 0) << 4;
-    retval |= (capture_bit_name (c, "d5", channels) ? 1 : 0) << 5;
-    retval |= (capture_bit_name (c, "d6", channels) ? 1 : 0) << 6;
-    retval |= (capture_bit_name (c, "d7", channels) ? 1 : 0) << 7;
+    char name[100];
+    int i;
+
+    for (i = 0; i < 8; i++) {
+        sprintf (name, "%s%d", DATA_PREFIX, i);
+        retval |= (capture_bit_name (c, name, channels) ? 1 : 0) << i;
+    }
 
     //printf ("data: 0x%x\n", retval);
     return retval;
@@ -60,6 +83,8 @@ static char *nand_command (unsigned int command)
 	    return "ID Read (2)";
 	case 0x9A:
 	    return "ID Read (3)";
+        case 0x31:
+            return "Page Read Cache Mode Start";
 	default:
 	    return "Unknown";
     }
@@ -67,82 +92,59 @@ static char *nand_command (unsigned int command)
 
 static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 {
-    static unsigned int cle_mode;
-    static unsigned int ale_mode;
-    static unsigned int cur_data = 0;
-    static unsigned int cur_data_len = 0;
     static unsigned char data_buffer[1024];
     static unsigned int data_len = 0;
+    static int64_t address = -1;
 
     if (!prev) // need it to detect edges
 	return;
 
-    if (!capture_bit_name (c, "nce", channels)) // we're accessing xD
+#define DUMP_DATA() do {if (data_len) { \
+                            if (address != -1) \
+                                printf ("Address: 0x%llx (Block: 0x%llx, Page: 0x%llx, Byte: 0x%llx)\n", \
+                                    address, address >> 22, (address >> 16) & 0x1f, (address & 0xffff)); \
+                            display_data_buffer (data_buffer, data_len, 0);  \
+                            data_len = 0; \
+                            address = -1; \
+                            } \
+                     } while (0)
+
+    if (!capture_bit_name (c, NCE_NAME, channels)) // we're accessing xD
     {
 #if 0
 	printf ("nce: %d %d %d\n", 
-		capture_bit_name (c, "ale", channels),
-		capture_bit_name (c, "cle", channels),
-		capture_bit_name (c, "nwe", channels));
+		capture_bit_name (c, ALE_NAME, channels),
+		capture_bit_name (c, CLE_NAME, channels),
+		capture_bit_name (c, NWE_NAME, channels));
 #endif
-	if (capture_bit_name (c, "ale", channels))
-	{
-	    //printf ("into ale mode\n");
-	    ale_mode = 1;
-	}
-	else if (ale_mode)
-	{
-	    printf ("\tAddress: 0x%08x\n", cur_data);
-	    cur_data = cur_data_len = ale_mode = 0;
-	}
-
-	if (capture_bit_name (c, "cle", channels))
-	{
-	    //printf ("into cle mode\n");
-	    cle_mode = 1;
-	    if (data_len)
-	    {
-		display_data_buffer (data_buffer, data_len, 0);
-		data_len = 0;
-	    }
-	}
-	else if (cle_mode)
-	{
-	    printf ("Command: %s (0x%x)\n", nand_command (cur_data), cur_data);
-	    cur_data = cur_data_len = cle_mode = 0;
-	}
-
-	if (capture_bit_transition_name (c, prev, "nwe", channels, TRANSITION_low_to_high))
-	{
+	if (capture_bit_transition_name (c, prev, NWE_NAME, channels, TRANSITION_low_to_high)) {
 	    uint8_t data = xd_data (c, channels);
-	    //printf ("Write\n");
-	    if (ale_mode || cle_mode)
-	    {
-		cur_data |= (data << cur_data_len);
-		cur_data_len += 8;
-	    }
-	    else
-	    {
-		data_buffer[data_len] = data;
-		data_len++;
-	    }
-	}
+            if (capture_bit_name (c, ALE_NAME, channels)) {
+                DUMP_DATA();
+                if (address == -1)
+                    address = data;
+                else
+                    address = (address << 8) | data;
+            } else if (capture_bit_name (c, CLE_NAME, channels)) {
+                DUMP_DATA ();
+                printf ("Command: %s (0x%x)\n", nand_command (data), data);
+            } else {
+                data_buffer[data_len++] = data;
+            }
+        }
 
-	if (capture_bit_transition_name (c, prev, "nre", channels, TRANSITION_low_to_high))
+	if (capture_bit_transition_name (c, prev, NRE_NAME, channels, TRANSITION_low_to_high))
 	{
 	    uint8_t data = xd_data (c, channels);
 	    //printf ("read\n");
-	    if (ale_mode || cle_mode)
+	    if (capture_bit_name (c, ALE_NAME, channels) || capture_bit_name (c, CLE_NAME,  channels))
 		printf ("WARNING: READ WHILE IN ALE/CLE\n");
 
 	    data_buffer[data_len] = data;
 	    data_len++;
 	}
-    }
-    else if (data_len) // finished accessing, so dump our outstanding data
-    {
-	display_data_buffer (data_buffer, data_len, 0);
-	data_len = 0;
+    } else {
+        DUMP_DATA ();
     }
 }
 

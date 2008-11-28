@@ -32,6 +32,12 @@ OBJECTS+=spi.o
 CFLAGS+=-DPARSE_NOR
 OBJECTS+=nor.o
 
+CFLAGS+=-DPARSE_DM9000
+OBJECTS+=dm9000.o
+
+CFLAGS+=-DPARSE_CAMERA
+OBJECTS+=camera_if.o
+
 default: tlaparser
 
 %.o: %.c $(HEADERS)
