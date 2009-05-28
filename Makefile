@@ -38,13 +38,21 @@ OBJECTS+=dm9000.o
 CFLAGS+=-DPARSE_CAMERA
 OBJECTS+=camera_if.o
 
+CFLAGS+=-DPARSE_SSC_AUDIO
+OBJECTS+=ssc_audio.o
+
+CFLAGS+=-DPARSE_OV3640
+OBJECTS+=ov3640.o
+
 default: tlaparser
 
 %.o: %.c $(HEADERS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	@echo "\tCC $<"
+	@$(CC) -c -o $@ $< $(CFLAGS)
 
 tlaparser: $(OBJECTS)
-	$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
+	@echo "\tLD $@"
+	@$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
 
 clean:
 	rm -f $(OBJECTS) tlaparser

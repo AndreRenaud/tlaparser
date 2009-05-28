@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include "common.h"
 #include "dumpdata.h"
@@ -16,35 +17,43 @@ extern list_t *final_channels;
 struct parser_info
 {
     parser_function func;
-    char code;
+    char *code_name;
     char *description;
 };
 
 struct parser_info parsers[] = {
-    {parse_61k, '6', "Parse 61K tape drive"},
-    {parse_8250, '8', "Parse 8250 uart bus"},
-    {parse_kennedy, 'k', "Parse Kennedy tape drive bus"},
-    {parse_pertec, 'p', "Parse Pertec tape drive bus"},
-    {parse_scsi, 's', "Parse SCSI bus"},
-    {parse_xd, 'x', "Parse xD/NAND data bus"},
-    {parse_pci, 'P', "Parse PCI bus"},
-    {parse_spi, 'S', "Parse SPI bus"},
-    {parse_nor, 'n', "Parse NOR flash"},
-    {parse_dm9000, '9', "Parse DM9000"},
-    {parse_camera, 'c', "Parse Camera"},
+    {parse_61k,		"61k",		"61K tape drive"},
+    {parse_8250,	"8250",		"8250 uart bus"},
+    {parse_kennedy,	"kennedy",	"Kennedy tape drive bus"},
+    {parse_pertec,	"pertec",	"Pertec tape drive bus"},
+    {parse_scsi,	"scsi",		"SCSI bus"},
+    {parse_xd,		"xd",		"xD/NAND data bus"},
+    {parse_pci,		"pci",		"PCI bus"},
+    {parse_spi,		"spi",		"SPI bus"},
+    {parse_nor,		"nor",		"NOR flash"},
+    {parse_dm9000,	"dm9000",	"DM9000"},
+    {parse_camera, 	"camera",	"Camera"},
+    {parse_ssc_audio,	"ssc_audio",	"SSC Audio"},
+    {parse_ov3640,	"ov3640",	"ov3640 image sensor"},
 };
 #define NPARSERS (sizeof (parsers) / sizeof (parsers[0]))
 
 static void usage (char *prog)
 {
     int i;
-    fprintf (stderr, "Usage: %s [options] tlafile\n", prog);
-    fprintf (stderr, "\t-d	    : Dump file contents\n"
-		     "\t-l	    : Dump channel names\n"
-		     "\t-b          : Dump changing bits\n"
-		     "\t-o options  : List of comma separated options (ie: option1,option2=foo,option3)\n");
+    fprintf(stderr, "Usage: %s [options] tlafile\n", prog);
+    fprintf(stderr, 
+	    "  -d, --dump             : Dump file contents\n"
+	    "  -l, --list-channels    : Dump channel names\n"
+	    "  -b, --bits             : Dump changing bits\n"
+	    "  -o, --optiosn=OPTIONS  : List of comma separated options (ie: opt1,opt2=foo,opt3)\n"
+	    "  -p, --parser=PARSER    : Parser to use\n"
+	    );
+    
+    printf("\nAvailable parsers:\n");
     for (i = 0; i < NPARSERS; i++)
-	printf ("\t-%c	    : %s\n", parsers[i].code, parsers[i].description);
+	printf ("  %-10s             : %s\n", 
+		parsers[i].code_name, parsers[i].description);
 }
 
 static char *options = NULL;
@@ -105,49 +114,56 @@ int option_val (char *name, char *buffer, int buff_len)
     return 0;
 }
 
-
-
 int main (int argc, char *argv[])
 {
-    char *file;
+    const char *short_options = "dblo:p:"; 
+    const struct option long_options[] = {
+	{"dump",		no_argument,		NULL,	'd'},
+	{"bits",		no_argument,		NULL,	'b'},
+	{"list-channels",	no_argument,		NULL,	'l'},
+	{"options",		required_argument,	NULL,	'o'},	
+	{"parser",		required_argument,	NULL,	'p'},
+    };    
+    char *file, *parser = NULL;
     int dump = 0, list_channels = 0, changing = 0;
     bulk_capture *cap = NULL;
     int parse_func = -1;
-    char opt_strings[100] = "dblo:";
+    
     int i;
 
-    for (i = 0; i < NPARSERS; i++)
-    {
-	int len = strlen (opt_strings);
-	opt_strings[len] = parsers[i].code;
-	opt_strings[len + 1] = '\0';
-    }
-
-    while (1)
-    {
-	int o = getopt (argc, argv, opt_strings);
+    while (1) {
+	int o = getopt_long(argc, argv, short_options, long_options, NULL);
 	if (o == -1)
 	    break;
-	switch (o)
-	{
-	    case 'd': dump = 1; break;
-	    case 'b': changing = 1; break;
-	    case 'l': list_channels = 1; break;
-	    case 'o': options = optarg; break;
-	    default:
-		for (i = 0; i < NPARSERS; i++)
-		    if (parsers[i].code == o)
-		    {
-			parse_func = i;
-			break;
-		    }
+	switch (o) {
+	case 'd': dump = 1; break;
+	case 'b': changing = 1; break;
+	case 'l': list_channels = 1; break;
+	case 'o': options = optarg; break;
+	case 'p': parser = optarg; break;
+	default:
+	    fprintf(stderr, "Unknown argument\n");
+	    usage(argv[0]);
+	    exit(EXIT_FAILURE);
+	}
+    }
 
-		if (i == NPARSERS)
-		{
-		    fprintf (stderr, "Unknown option: %d (%c)\n", o, o);
-		    usage (argv[0]);
-		    return (EXIT_FAILURE);
-		}
+    if (parse_func < 0) {
+	if (!parser) {
+	    fprintf(stderr, "No parser specified\n");
+	    usage(argv[0]);
+	    exit(EXIT_FAILURE);
+	}
+	for (i = 0; i < NPARSERS; i++) {
+	    if (strcmp(parser, parsers[i].code_name) == 0) {
+		parse_func = i;
+		break;
+	    }
+	}
+	if (parse_func < 0) {
+	    fprintf(stderr, "Unknown parser '%s'\n", parser);
+	    usage(argv[0]);
+	    exit(EXIT_FAILURE);
 	}
     }
 
