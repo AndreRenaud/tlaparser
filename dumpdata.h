@@ -5,9 +5,6 @@
 
 #include "lists.h"
 
-#define MAX_DATA_TRANSFER (8 * 1024)
-#define MAX_DATA_LEN (100 * 1024 * 1024)
-
 enum
 {
     TRANSITION_low_to_high,
