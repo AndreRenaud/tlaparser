@@ -422,13 +422,15 @@ int time_log (capture *c, char *msg, ...)
 #endif
     if (first_capture && !first_time)
 	first_time = capture_time(first_capture) / 1000;
-    printf ("[%10.10lld] ", time_now - first_time);
+    if (!option_set("no-timing")) {
+        printf ("[%10.10lld] ", time_now - first_time);
 
 
-    if (last_time != -1)
-	printf ("[%8.8lld] ", time_now - last_time);
-    else
-	printf ("[None    ] ");
+        if (last_time != -1)
+            printf ("[%8.8lld] ", time_now - last_time);
+        else
+            printf ("[None    ] ");
+    }
     last_time = time_now;
 
     printf ("%s", buffer);

@@ -43,7 +43,6 @@ static int sst_cmd_want_addr (int cmd)
 
 static void decode_frame (unsigned char *in_data, unsigned char *out_data, int len)
 {
-    int i;
     unsigned char cmd;
     const char *cmd_string;
     int addr = -1;
