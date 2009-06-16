@@ -96,6 +96,34 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
 		case 0x12: // inquiry response data
 		    printf ("\tInquiry response data\n");
 		    break;
+
+                case 0x03: // request sense - page 123, 8.2.14, Table 65
+                {
+                    unsigned int v, len;
+                    if (!(buf[0] & 0x80)) 
+                        printf ("\tRequest Sense not valid\n");
+                    printf ("\tError code: 0x%x\n", buf[0] & 0x7f);
+                    printf ("\tFlags:%s%s%s Key: 0x%x\n", 
+                            buf[2] & 0x80 ? " Filemark" : "",
+                            buf[2] & 0x40 ? " EOM" : "",
+                            buf[2] & 0x20 ? " ILI" : "",
+                            buf[2] & 0x0f);
+#if 0
+                    v = buf[3] << 24 | buf[4] << 16 | buf[5] << 8 | buf[6];
+                    printf ("\tInformation: 0x%x\n", v);
+
+                    len = buf[7];
+                    printf ("\tAdditional Len: %d (%d total)\n", len, len + 7);
+                    printf ("\tASC: 0x%x\n", buf[12]);
+                    printf ("\tASCQ: 0x%x\n", buf[13]);
+                    printf ("\tSense Key %s\n", (buf[15] & 0x80) ? "valid" : "invalid");
+                    v = (buf[15] & 0x7f) << 16 | buf[16] << 8 | buf[17];
+                    printf ("\tSense-Key:0x%x\n", v);
+
+#endif
+                    break;
+                }
+
 	    }
 	    break;
 	}
@@ -115,6 +143,19 @@ static void decode_scsi_command (int phase, unsigned char *buf, int last_phase_c
                     len = buf[2] << 16 | buf[3] << 8 | buf[4];
                     printf (" length=0x%x\n", len);
 		    break;
+                }
+
+                case 0x11: // space
+                {
+                    unsigned int code = buf[1];
+                    int len = buf[2] << 16 | buf[3] << 8 | buf[4];
+
+                    if (len & (1 << 23))
+                        len |= 0xff000000; // 2s complement
+
+
+                    printf ("\tcode=%d length=%d\n", code, len);
+                    break;
                 }
 
 
@@ -330,13 +371,13 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last_cap)
     // bsy is low, and nack goes from high to low
     if (!capture_bit (c, pa.nbsy)) {
         int nio = capture_bit (c, pa.nio);
-        int got_data = 0;
+        int got_data;
         if (nio)
             got_data = capture_bit_transition(c, prev, pa.nack,
                     TRANSITION_high_to_low);
         else
-            got_data = capture_bit_transition(c, prev, pa.nack, 
-                    TRANSITION_low_to_high);
+            got_data = capture_bit_transition(c, prev, pa.nreq, 
+                    TRANSITION_high_to_low);
         if (got_data) {
             int phase = 0;
             int ch;
@@ -347,8 +388,7 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last_cap)
             phase |= capture_bit_name (c, "nIO", channels) << 0;
             phase = (~phase) & 0x7; // invert, since signals are negative logic
 
-            if (phase != last_phase && last_phase != -1)
-            {
+            if (phase != last_phase && last_phase != -1) {
                 time_log (c, "Phase: %s (%d)\n", scsi_phases[last_phase], last_phase);
                 decode_scsi_command (last_phase, buffer, last_phase_command);
                 display_data_buffer (buffer, buffer_len, 0);
@@ -374,7 +414,9 @@ static void parse_scsi_cap (capture *c, list_t *channels, int last_cap)
     }
    
     // bsy went high, end of transaction 
-    if (last_phase != -1 && (capture_bit_transition (c, prev, pa.nbsy, TRANSITION_low_to_high) || last_cap))
+    if (last_phase != -1 && 
+        (capture_bit_transition (c, prev, pa.nbsy, TRANSITION_low_to_high) || 
+         last_cap))
     {
 	time_log (c, "Phase: %s (%d) (nbsy)\n", scsi_phases[last_phase], last_phase);
 	decode_scsi_command (last_phase, buffer, last_phase_command);
