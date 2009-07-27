@@ -480,7 +480,7 @@ static uint8_t printable_char (int data)
 	    return '.';
 }
 
-void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
+void display_data_buffer (unsigned char *buffer, int len, int flags)
 {
     int i,j;
     int linelen;
@@ -493,14 +493,20 @@ void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
     linelen = col / 7;
 #endif
 
-    //linelen = 8; // just do 8 across
+    if (!flags)
+        flags = DISP_FLAG_ascii;
+
     linelen = 16;
+
+    if (flags == DISP_FLAG_both)
+        linelen = 12;
+    //linelen = 8; // just do 8 across
     
     printf ("Data length: %d\n", len);
     for (i = 0; i < len; i+=linelen)
     {
 	int this_len = min(linelen, len - i);
-	printf ("  %4.4x: ", i); 
+	printf (" %3.3x:", i); 
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j]);
 
@@ -510,16 +516,28 @@ void display_data_buffer (unsigned char *buffer, int len, int ebcdic)
 	    printf ("%2.2x ", buffer[i + j] ^ 0xff);
 #endif
 
-	printf ("%*s'", (linelen - this_len) * 3, "");
-	for (j = 0; j < this_len; j++)
-	{
-	    unsigned char ch = buffer[i + j];
-	    if (ebcdic)
-		ch = ebcdic_to_ascii [ch];
-	    printf ("%c", printable_char (ch));
-	}
+        printf ("%*s", (linelen - this_len) * 3, "");
 
-	printf ("%*s'\n", (linelen - this_len), "");
+        if (flags & DISP_FLAG_ascii) {
+            printf ("'");
+            for (j = 0; j < this_len; j++) {
+                unsigned char ch = buffer[i + j];
+                printf ("%c", printable_char (ch));
+            }
+
+            printf ("%*s'", (linelen - this_len), "");
+        }
+        if (flags & DISP_FLAG_ebcdic) {
+            printf (" '");
+            for (j = 0; j < this_len; j++) {
+                unsigned char ch = ebcdic_to_ascii[buffer[i + j]];
+                printf ("%c", printable_char (ch));
+            }
+
+            printf ("%*s'", (linelen - this_len), "");
+        }
+
+        printf ("\n");
     }
 }
 

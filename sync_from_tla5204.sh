@@ -1,4 +1,8 @@
 #!/bin/bash
+# Synchronises a directory off the logic analyser onto this machine
+# Handy when you're analysing stuff 'live' 
+# Uses rsync, so you can just keep sync'ing the same directory, and it
+# will only copy what has changed.
 IP=192.168.2.90
 SYNC=$1
 if [ -z "$1" ] ; then

@@ -14,6 +14,14 @@ enum
     TRANSITION_rising_edge = TRANSITION_low_to_high,
 };
 
+enum {
+    DISP_FLAG_ebcdic = 1 << 0,
+    DISP_FLAG_ascii = 1 << 1,
+    DISP_FLAG_none = 1 << 2,
+    DISP_FLAG_default = 0,
+    DISP_FLAG_both = DISP_FLAG_ebcdic | DISP_FLAG_ascii,
+};
+
 
 //#define CAPTURE_DATA_BYTES 14 // for the TLA 714
 #define CAPTURE_DATA_BYTES 18 // for the TLA 5204
@@ -73,7 +81,7 @@ channel_info *build_channel (char *probe, char *name, int inverted);
 
 int time_log (capture *c, char *msg, ...);
 
-void display_data_buffer (unsigned char *buffer, int len, int ebcdic);
+void display_data_buffer (unsigned char *buffer, int len, int flags);
 void display_dual_data_buffer (unsigned char *buff1, int len1, unsigned char *buff2, int len2);
 
 extern capture *first_capture;

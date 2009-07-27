@@ -15,20 +15,24 @@ enum
     CMD_SPACE_FWD = 0x01,
     CMD_WRITE = 0x08,
     CMD_WRITE_FM = 0x0c,
+    CMD_ERASE_FIXED_LEN = 0x0d,
 };
 
 static int decode_pertec_command (capture *c, list_t *channels)
 {
     int irev, iwrt, iwfm, iedit, ierase;
+    unsigned int retval;
 
-    /* negative logic */
     irev = capture_bit_name (c, "irev", channels);
     iwrt = capture_bit_name (c, "iwrt", channels);
     iwfm = capture_bit_name (c, "iwfm", channels);
     iedit = capture_bit_name (c, "iedit", channels);
     ierase = capture_bit_name (c, "ierase", channels);
 
-    return (irev << 4) | (iwrt << 3) |  (iwfm << 2) | (iedit << 1) | (ierase << 0);
+    retval = (irev << 4) | (iwrt << 3) |  (iwfm << 2) | (iedit << 1) | (ierase << 0);
+    /* negative logic */
+    retval = (~retval) & 0x1f;
+    return retval;
 }
 
 static int parity (int val)
@@ -39,7 +43,7 @@ static int parity (int val)
     for (i = 0; i < 8; i++)
 	par = par ^ (val & (1 << i) ? 0 : 1);
 
-    return par;
+    return !par;
 }
 
 static int decode_write_data (capture *c, list_t *channels)
@@ -52,13 +56,13 @@ static int decode_write_data (capture *c, list_t *channels)
     for (i = 0; i < 8; i++)
     {
 	sprintf (name, "iw%d", i);
-	bit = capture_bit_name (c, name, channels);
+	bit = capture_bit_name (c, name, channels) ? 0 : 1;
 	retval |= bit << i;
     }
 
     if (!ignore_parity)
     {
-	bit = capture_bit_name (c, "iwp", channels) ? 1 : 0;
+	bit = capture_bit_name (c, "iwp", channels) ? 0 : 1;
 	if (parity (retval) != bit)
 	    time_log (c, "Parity error on write data: 0x%x (par = %d, not %d)\n", retval, bit, parity (retval));
     }
@@ -76,7 +80,7 @@ static int decode_read_data (capture *c, list_t *channels)
     for (i = 0; i < 8; i++)
     {
 	sprintf (name, "ir%d", i);
-	bit = capture_bit_name (c, name, channels) ? 1 : 0;
+	bit = capture_bit_name (c, name, channels) ? 0 : 1;
 	retval |= bit << i;
     }
 
@@ -98,6 +102,7 @@ static const char *pertec_command_name (int cmd)
 	case CMD_SPACE_FWD: return "space_fwd";
 	case CMD_WRITE: return "write";
 	case CMD_WRITE_FM: return "write_fm";
+        case CMD_ERASE_FIXED_LEN: return "erase_fixed_len";
 	default:   return "unknown";
     }
 }
@@ -123,6 +128,7 @@ struct pin_assignments
 
     channel_info *igo;
     channel_info *irew;
+    channel_info *irwu;
     channel_info *iwstr;
     channel_info *irstr;
     channel_info *ilwd;
@@ -153,6 +159,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	pa.init = 1;
 	pa.igo = capture_channel_details (c, "igo", channels);
 	pa.irew = capture_channel_details (c, "irew", channels);
+	pa.irwu = capture_channel_details (c, "irwu", channels);
 	pa.iwstr = capture_channel_details (c, "iwstr", channels);
 	pa.irstr = capture_channel_details (c, "irstr", channels);
 	pa.ilwd = capture_channel_details (c, "ilwd", channels);
@@ -177,9 +184,11 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	/* Ignore any transitions that aren't for us */
 	int id = capture_bit (c, pa.ifad) << 2 | capture_bit (c, pa.itad0) << 1 | capture_bit (c, pa.itad1);
 
+        id = (~id) & 0x7;
+
 	if (id != pertec_id) // we don't want ones that aren't for us
 	{
-	    prev_bad = 1;
+	    //prev_bad = 1;
 	    return;
 	}
     }
@@ -194,24 +203,24 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	return;
 
     if (capture_bit (c, pa.idby) != capture_bit (prev, pa.idby))
-	time_log (c, "idby %sactive\n", capture_bit (c,pa.idby) ? "": "in");
+	time_log (c, "idby %sactive\n", !capture_bit (c,pa.idby) ? "": "in");
 
     if (capture_bit (c, pa.ifby) != capture_bit (prev, pa.ifby))
-	time_log (c, "ifby %sactive\n", capture_bit (c,pa.ifby) ? "": "in");
+	time_log (c, "ifby %sactive\n", !capture_bit (c,pa.ifby) ? "": "in");
 
     if (capture_bit (c, pa.ident) != capture_bit (prev, pa.ident))
-	time_log (c, "ident %sactive\n", capture_bit (c,pa.ident) ? "": "in");
+	time_log (c, "ident %sactive\n", !capture_bit (c,pa.ident) ? "": "in");
 
     if (capture_bit (c, pa.ildp) != capture_bit (prev, pa.ildp))
-	time_log (c, "ildp %sactive\n", capture_bit (c,pa.ildp) ? "": "in");
+	time_log (c, "ildp %sactive\n", !capture_bit (c,pa.ildp) ? "": "in");
 
-    if (capture_bit (c, pa.idby)) /* ifmk only valid when idby is active */
+    if (!capture_bit (c, pa.idby)) /* ifmk only valid when idby is active */
     {
 	if (capture_bit (c, pa.ifmk) != capture_bit (prev, pa.ifmk))
-	    time_log (c, "ifmk %sactive\n", capture_bit (c,pa.ifmk) ? "": "in");
+	    time_log (c, "ifmk %sactive\n", !capture_bit (c,pa.ifmk) ? "": "in");
     }
 
-    if (capture_bit_transition (c, prev, pa.igo, TRANSITION_rising_edge))
+    if (capture_bit_transition (c, prev, pa.igo, TRANSITION_falling_edge))
     {
 	int cmd = decode_pertec_command (c, channels);
 	time_log (c, "igo: %x %s\n", cmd, pertec_command_name (cmd));
@@ -219,7 +228,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	last_word = 0;
 
 	if (reading || writing)
-	    time_log (c, "igo while outstanding read/write");
+	    time_log (c, "igo while outstanding read/write\n");
 
 
 	if (cmd == CMD_READ_FWD)
@@ -233,9 +242,14 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	time_log (c, "ARGH! SOMEHOW I'M BOTH READING & WRITING\n");
     }
 
-    if (capture_bit_transition (c, prev, pa.irew, TRANSITION_falling_edge))
+    if (capture_bit_transition (c, prev, pa.irew, TRANSITION_rising_edge))
     {
 	time_log (c, "rewind\n");
+    }
+
+    if (capture_bit_transition (c, prev, pa.irwu, TRANSITION_rising_edge))
+    {
+	time_log (c, "rewind offline\n");
     }
 
     if (writing && capture_bit_transition (c, prev, pa.iwstr, TRANSITION_falling_edge))
@@ -246,7 +260,7 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 
 	if (last_word)
 	{
-	    display_data_buffer (buffer, buffer_pos, 0);
+	    display_data_buffer (buffer, buffer_pos, DISP_FLAG_both);
 	    //dump_buffer ("Write", buffer, buffer_pos);
 	    buffer_pos = 0;
 	    last_word = 0;
@@ -261,23 +275,26 @@ static void parse_pertec_cap (capture *c, list_t *channels)
 	buffer[buffer_pos++] = decode_read_data (c, channels);
     }
 
-    if (buffer_pos && capture_bit_transition (c, prev, pa.idby, TRANSITION_falling_edge))
+    if (reading && capture_bit_transition (c, prev, pa.idby, TRANSITION_rising_edge))
     {
-	display_data_buffer (buffer, buffer_pos, 0);
+	display_data_buffer (buffer, buffer_pos, DISP_FLAG_both);
+        FILE *fp = fopen("pertec_read_data.dat", "ab");
+        fwrite(buffer, buffer_pos, 1, fp);
+        fclose (fp);
 	//dump_buffer ("Read", buffer, buffer_pos);
 	buffer_pos = 0;
 	last_word = 0;
 	reading = 0;
     }
 
-    if (capture_bit_transition (c, prev, pa.ilwd, TRANSITION_rising_edge) && writing)
+    if (capture_bit_transition (c, prev, pa.ilwd, TRANSITION_falling_edge) && writing)
     {
 	time_log (c, "Last word\n");
 	last_word = 1;
     }
 
-    if (capture_bit (c, pa.idby) && !capture_bit (c, pa.ifby))
-	time_log (c, "IDBY high, but IFBY low\n");
+    if (!capture_bit (c, pa.idby) && capture_bit (c, pa.ifby))
+	time_log (c, "IDBY, but not IFBY low\n");
 
     /* Should have a check here that looks as how ILDP, IDENT & IREW all tie together
      * (make sure that we do BOT handling properly */
