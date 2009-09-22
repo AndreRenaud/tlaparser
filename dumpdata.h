@@ -7,8 +7,9 @@
 
 enum
 {
-    TRANSITION_low_to_high,
-    TRANSITION_high_to_low,
+    TRANSITION_none,
+    TRANSITION_low_to_high = 1,
+    TRANSITION_high_to_low = -1,
 
     TRANSITION_falling_edge = TRANSITION_high_to_low,
     TRANSITION_rising_edge = TRANSITION_low_to_high,
@@ -57,8 +58,8 @@ void dump_changing_channels (bulk_capture *cap, char *name, list_t *channels);
 /* Returns the channel with name 'channel_name'
  * Useful to speed things up so we don't continually do the same searches
  */
-channel_info *capture_channel_details (capture *cap, char *channel_name, list_t *channels);
-// returns 0, or 1 depending on whether the bit from the capture corresponding to 
+channel_info *capture_channel_details (char *channel_name, list_t *channels);
+// returns 0, or 1 depending on whether the bit from the capture corresponding to
 // 'channel_name' (from the channels list) was set
 int capture_bit_name (capture *cap, char *channel_name, list_t *channels);
 // retrieves 1 bit from the capture, from probe 'probe' ( see the PROBE_ structure) index 'index'
@@ -71,9 +72,11 @@ unsigned int capture_data(capture *cap, channel_info *c[], int len);
 int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int dir);
 // same as above, but specify the channel by name
 int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t *channels, int dir);
+// returns direction of transition between two captures (TRANSITION_...)
+int capture_bit_change (capture *cur, capture *prev, channel_info *chan);
 
 
-/* Returns the time of the sample in nano seconds */
+/* Returns the time of the sample in micro seconds */
 uint64_t capture_time (capture *c);
 
 bulk_capture *build_dump (void *data, int length);

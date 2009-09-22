@@ -39,7 +39,7 @@ uint64_t capture_time (capture *c)
     //t = 0;
     b = ntohl (c->time_bottom);
 
-    // timings are in 1/8th of a nano-second, so change it into nano seconds
+    // timings are in 1/8th of a micro-second, so change it into micro seconds
     return (t << 32 | b) / 8;
 }
 
@@ -150,14 +150,14 @@ int capture_bit (capture *cap, channel_info *c)
 unsigned int capture_data(capture *cap, channel_info *c[], int len)
 {
     unsigned data = 0x0, i;
-    
+
     for(i = 0; i < len; i++) {
 	int bit = capture_bit(cap, c[i]);
-	
+
 	if(bit)
 	    data |= (1 << i);
     }
-    
+
     return data;
 }
 
@@ -179,7 +179,7 @@ static void simplify_probe_name (char *probe_name, char *result)
  * Be a bit generous, look for substrings, ignore case etc...
  * Should possibly try and drop characters like '<', '>', '_'
  */
-channel_info *capture_channel_details (capture *cap, char *channel_name_full, list_t *channels)
+channel_info *capture_channel_details (char *channel_name_full, list_t *channels)
 {
     list_t *n;
     char channel_name[100];
@@ -204,7 +204,7 @@ channel_info *capture_channel_details (capture *cap, char *channel_name_full, li
 	channel_info *c = n->data;
 	simplify_probe_name (c->name, probe_name);
 	//printf ("Comparing '%s' to '%s'\n", probe_name, channel_name);
-	
+
 	if (strcasestr (probe_name, channel_name))
 	    return c;
 	if (strcasestr (channel_name, probe_name))
@@ -220,14 +220,39 @@ int capture_bit_name (capture *cap, char *channel_name, list_t *channels)
 {
     channel_info *chan;
 
-    chan = capture_channel_details (cap, channel_name, channels);
+    chan = capture_channel_details (channel_name, channels);
     if (chan)
 	return capture_bit (cap, chan);
     return -1;
 }
 
-int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int dir)
+
+int capture_bit_change (capture *cur, capture *prev, channel_info *chan)
 {
+    int n, p;
+
+    if (!chan)
+        return -1;
+    p = capture_bit (prev, chan);
+    if (p < 0)
+        return -1;
+    n = capture_bit (cur, chan);
+    if (n < 0)
+        return -1;
+    if (n && !p)
+        return TRANSITION_low_to_high;
+    if (!n && p)
+        return TRANSITION_high_to_low;
+    return TRANSITION_none;
+}
+
+
+int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int want_dir)
+{
+    int dir = capture_bit_change (cur, prev, chan);
+
+    return dir == -1 ? dir : dir == want_dir;
+#if 0
     int n, p;
     if (!chan)
 	return -1;
@@ -242,14 +267,14 @@ int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int
 	return 1;
     if (!n && p && dir == TRANSITION_high_to_low)
 	return 1;
-
+#endif
     return 0;
 }
 
 int capture_bit_transition_name (capture *cur, capture *prev, char *name, list_t *channels, int dir)
 {
     channel_info *chan;
-    chan = capture_channel_details (cur, name, channels);
+    chan = capture_channel_details (name, channels);
 
     return capture_bit_transition (cur, prev, chan, dir);
 }
@@ -319,7 +344,7 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
 
 #if 0
 #warning "Using guessed packing method" // this is wrong
-/* Probes are packed a3 a2 c3 c2 d3 d2 e3 e2 a1 a0 c1 c0 d1 d0 e1 e0 ?? */ 
+/* Probes are packed a3 a2 c3 c2 d3 d2 e3 e2 a1 a0 c1 c0 d1 d0 e1 e0 ?? */
     retval->probe = (retval->probe_name[0] - 'A') * 2;
     int probe_index = atoi (&retval->probe_name[1]);
     if (probe_index <= 1)
@@ -327,7 +352,7 @@ channel_info *build_channel (char *probe_name, char *name, int inverted)
     retval->probe += 1 - (probe_index % 2);
 #endif
 
-    retval->probe = name_to_index (retval->probe_name); 
+    retval->probe = name_to_index (retval->probe_name);
 
 
 #if 0
@@ -403,6 +428,32 @@ bulk_capture *build_dump (void *data, int length)
    return retval;
  }
 
+
+
+static void outtime (long long t, int max, int leading_zero)
+{
+//     printf ("[%10.10lld] ", t);
+    char out [25], *s;
+    char str [22];
+    int len, i;
+
+    len = sprintf (str, leading_zero ? "%12.12lld" : "%12lld", t);
+    s = out;
+    *s++ = '[';
+    for (i = len - max; i < len; i++)
+    {
+        if (i != len - max && !(i % 3))
+            *s++ = str [i - 1] == ' ' ? ' ' : ',';
+        *s++ = str [i];
+    }
+    *s++ = ']';
+    *s++ = ' ';
+    *s++ = '\0';
+    printf ("%s", out);
+}
+
+ //         printf ("[%10.10lld] ", time_now - first_time);
+
 capture *first_capture = NULL;
 int time_log (capture *c, char *msg, ...)
 {
@@ -421,13 +472,19 @@ int time_log (capture *c, char *msg, ...)
     printf ("[%10.10lld] ", time_now);
 #endif
     if (first_capture && !first_time)
+    {
 	first_time = capture_time(first_capture) / 1000;
+        if (first_time)
+            printf ("Start time = %lld\n", first_time);
+    }
     if (!option_set("no-timing")) {
-        printf ("[%10.10lld] ", time_now - first_time);
+        outtime (time_now - first_time, 10, 1);
+//         printf ("[%10.10lld] ", time_now - first_time);
 
 
         if (last_time != -1)
-            printf ("[%8.8lld] ", time_now - last_time);
+            outtime (time_now - last_time, 6, 0);
+//             printf ("[%8.8lld] ", time_now - last_time);
         else
             printf ("[None    ] ");
     }
@@ -484,6 +541,7 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
 {
     int i,j;
     int linelen;
+    int skipped = 0;
 #if 0
     const char *columns = getenv ("COLUMNS"); /* for some reason this doesn't work */
     int col = columns ? atoi (columns) : 80; /* Try to auto-adjust for terminal width */
@@ -501,12 +559,13 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
     if (flags == DISP_FLAG_both)
         linelen = 12;
     //linelen = 8; // just do 8 across
-    
-    printf ("Data length: %d\n", len);
+
+    printf ("Data length: 0x%x (%d)\n", len, len);
+
     for (i = 0; i < len; i+=linelen)
     {
 	int this_len = min(linelen, len - i);
-	printf (" %3.3x:", i); 
+	printf (" %3.3x:", i);
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j]);
 
@@ -538,6 +597,14 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
         }
 
         printf ("\n");
+        if (i == linelen * 4 && !skipped)
+        {
+            printf ("   <omitting buffer display as size 0x%x too large>\n", len);
+            skipped = 1;
+//             i = len - (4 * linelen);
+//             i = i - (i / linelen);
+            i = (len / linelen - 4) * linelen;
+        }
     }
 }
 
@@ -560,11 +627,11 @@ void display_dual_data_buffer (unsigned char *buff1, int len1, unsigned char *bu
     int i;
     int linelen = 8;
     int maxlen = max(len1, len2);
-    
+
     for (i = 0; i < maxlen; i+=linelen)
     {
 	int this_len;
-	printf ("  %4.4x: ", i); 
+	printf ("  %4.4x: ", i);
 
 	this_len = max(min(linelen, len1 - i), 0);
         display_buffer_line (&buff1[i], this_len, linelen);

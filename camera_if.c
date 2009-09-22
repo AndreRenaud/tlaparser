@@ -57,9 +57,9 @@ static void parse_camera_cap (capture *c, capture *prev, list_t *channels)
 
     if (pa.init == -1) {
         pa.init = 1;
-        pa.href = capture_channel_details (c, "href", channels);
-        pa.vref = capture_channel_details (c, "vref", channels);
-        pa.pclk = capture_channel_details (c, "pclk", channels);
+        pa.href = capture_channel_details ("href", channels);
+        pa.vref = capture_channel_details ("vref", channels);
+        pa.pclk = capture_channel_details ("pclk", channels);
     }
 
     if (!c && !prev) {

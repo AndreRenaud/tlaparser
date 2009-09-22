@@ -14,7 +14,7 @@ static unsigned int get_ftrd (capture *c, list_t *channels)
 	for (i = 0; i < 8; i++)
 	{
 	    sprintf (name, "FTRD%d", i);
-	    ftrd[i] = capture_channel_details (c, name, channels);
+	    ftrd[i] = capture_channel_details (name, channels);
 	}
 
     for (i = 0; i < 8; i++)
@@ -38,7 +38,7 @@ static unsigned int get_cis (capture *c, list_t *channels)
 	for (i = 0; i < 13; i++)
 	{
 	    sprintf (name, "CIS%d", i);
-	    cis[i] = capture_channel_details (c, name, channels);
+	    cis[i] = capture_channel_details (name, channels);
 	}
     }
 
@@ -105,14 +105,14 @@ static void parse_kennedy_cap (capture *c, list_t *channels)
     if (pa.init == -1)
     {
 	pa.init = 1;
-	pa.fwclk = capture_channel_details (c, "fwclk", channels);
-	pa.cccom = capture_channel_details (c, "cccom", channels);
-	pa.cdavl = capture_channel_details (c, "cdavl", channels);
-	pa.frclk = capture_channel_details (c, "frclk", channels);
-	pa.ffbusy = capture_channel_details (c, "ffbusy", channels);
-	pa.ffmkd = capture_channel_details (c, "ffmkd", channels);
-	pa.feotp = capture_channel_details (c, "feotp", channels);
-	pa.crest = capture_channel_details (c, "crest", channels);
+	pa.fwclk = capture_channel_details ("fwclk", channels);
+	pa.cccom = capture_channel_details ("cccom", channels);
+	pa.cdavl = capture_channel_details ("cdavl", channels);
+	pa.frclk = capture_channel_details ("frclk", channels);
+	pa.ffbusy = capture_channel_details ("ffbusy", channels);
+	pa.ffmkd = capture_channel_details ("ffmkd", channels);
+	pa.feotp = capture_channel_details ("feotp", channels);
+	pa.crest = capture_channel_details ("crest", channels);
     }
 
     if (!prev) // need it to detect edges

@@ -157,20 +157,20 @@ static void parse_pertec_cap (capture *c, list_t *channels)
     if (pa.init == -1 && c) // work these out once only, to speed things up
     {
 	pa.init = 1;
-	pa.igo = capture_channel_details (c, "igo", channels);
-	pa.irew = capture_channel_details (c, "irew", channels);
-	pa.irwu = capture_channel_details (c, "irwu", channels);
-	pa.iwstr = capture_channel_details (c, "iwstr", channels);
-	pa.irstr = capture_channel_details (c, "irstr", channels);
-	pa.ilwd = capture_channel_details (c, "ilwd", channels);
-	pa.idby = capture_channel_details (c, "idby", channels);
-	pa.ifby = capture_channel_details (c, "ifby", channels);
-	pa.ifad = capture_channel_details (c, "ifad", channels);
-	pa.itad0 = capture_channel_details (c, "itad<0>", channels);
-	pa.itad1 = capture_channel_details (c, "itad<1>", channels);
-	pa.ident = capture_channel_details (c, "ident", channels);
-	pa.ifmk = capture_channel_details (c, "ifmk", channels);
-	pa.ildp = capture_channel_details (c, "ildp", channels);
+	pa.igo = capture_channel_details ("igo", channels);
+	pa.irew = capture_channel_details ("irew", channels);
+	pa.irwu = capture_channel_details ("irwu", channels);
+	pa.iwstr = capture_channel_details ("iwstr", channels);
+	pa.irstr = capture_channel_details ("irstr", channels);
+	pa.ilwd = capture_channel_details ("ilwd", channels);
+	pa.idby = capture_channel_details ("idby", channels);
+	pa.ifby = capture_channel_details ("ifby", channels);
+	pa.ifad = capture_channel_details ("ifad", channels);
+	pa.itad0 = capture_channel_details ("itad<0>", channels);
+	pa.itad1 = capture_channel_details ("itad<1>", channels);
+	pa.ident = capture_channel_details ("ident", channels);
+	pa.ifmk = capture_channel_details ("ifmk", channels);
+	pa.ildp = capture_channel_details ("ildp", channels);
     }
 
     if (!prev) // skip first sample

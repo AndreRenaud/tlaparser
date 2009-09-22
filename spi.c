@@ -90,10 +90,10 @@ static void parse_spi_cap (capture *c, capture *prev, list_t *channels)
 
     if (pa.init == -1) {
         pa.init = 1;
-        pa.mosi = capture_channel_details (c, "mosi", channels);
-        pa.miso = capture_channel_details (c, "miso", channels);
-        pa.sfrm = capture_channel_details (c, "sfrm", channels);
-        pa.sclk = capture_channel_details (c, "sclk", channels);
+        pa.mosi = capture_channel_details ("mosi", channels);
+        pa.miso = capture_channel_details ("miso", channels);
+        pa.sfrm = capture_channel_details ("sfrm", channels);
+        pa.sclk = capture_channel_details ("sclk", channels);
     }
 
     if (!prev)

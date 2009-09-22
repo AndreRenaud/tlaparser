@@ -90,10 +90,10 @@ static void parse_8250_cap (capture *c, list_t *channels)
     if (pa.init == -1 && c) // work these out once only, to speed things up
     {
 	pa.init = 1;
-	pa.irq = capture_channel_details (c, "quart0_int", channels);
-	pa.cs = capture_channel_details (c, "quart0_cs_n", channels);
-	pa.write = capture_channel_details (c, "x_wrn_1", channels);
-	pa.read = capture_channel_details (c, "x_rdn_1", channels);
+	pa.irq = capture_channel_details ("quart0_int", channels);
+	pa.cs = capture_channel_details ("quart0_cs_n", channels);
+	pa.write = capture_channel_details ("x_wrn_1", channels);
+	pa.read = capture_channel_details ("x_rdn_1", channels);
     }
 
     if (!prev) // skip first sample

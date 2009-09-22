@@ -50,9 +50,9 @@ static void parse_nor_cap (capture *c, capture *prev, list_t *channels)
 
     if (pa.init == -1) {
         pa.init = 1;
-        pa.cs = capture_channel_details (c, "cs-nor-n-1", channels);
-        pa.read = capture_channel_details (c, "nrd", channels);
-        pa.write = capture_channel_details (c, "nwr", channels);
+        pa.cs = capture_channel_details ("cs-nor-n-1", channels);
+        pa.read = capture_channel_details ("nrd", channels);
+        pa.write = capture_channel_details ("nwr", channels);
     }
 
     if (!prev)

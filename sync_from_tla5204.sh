@@ -3,7 +3,7 @@
 # Handy when you're analysing stuff 'live' 
 # Uses rsync, so you can just keep sync'ing the same directory, and it
 # will only copy what has changed.
-IP=192.168.2.90
+IP=192.168.7.90
 SYNC=$1
 if [ -z "$1" ] ; then
     echo "Enter directory name on TLA5204 to sync (relative to C:/My Documents"

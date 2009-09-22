@@ -103,10 +103,10 @@ static void parse_dm9000_cap (capture *c, capture *prev, list_t *channels)
 
     if (pa.init == -1) {
         pa.init = 1;
-        pa.cs = capture_channel_details (c, "cs4-n", channels);
-        pa.read = capture_channel_details (c, "oe-n", channels);
-        pa.write = capture_channel_details (c, "rw-n", channels);
-        pa.cmd = capture_channel_details (c, "a19", channels);
+        pa.cs = capture_channel_details ("cs4-n", channels);
+        pa.read = capture_channel_details ("oe-n", channels);
+        pa.write = capture_channel_details ("rw-n", channels);
+        pa.cmd = capture_channel_details ("a19", channels);
     }
 
     if (!prev)

@@ -100,10 +100,10 @@ void parse_ssc_audio(bulk_capture *b, char *filename, list_t *channels)
     capture *c, *prev;
     int i;
 
-    ssc.sclk	= capture_channel_details(c, "bclk", channels);
-    ssc.frame	= capture_channel_details(c, "lrc", channels);
-    ssc.din	= capture_channel_details(c, "din", channels);
-    ssc.dout	= capture_channel_details(c, "dout", channels);
+    ssc.sclk	= capture_channel_details("bclk", channels);
+    ssc.frame	= capture_channel_details("lrc", channels);
+    ssc.din	= capture_channel_details("din", channels);
+    ssc.dout	= capture_channel_details("dout", channels);
 
     ssc_clear_sample();
     

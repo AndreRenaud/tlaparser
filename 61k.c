@@ -100,11 +100,11 @@ static void parse_61k_cap (capture *c, list_t *channels)
     if (pa.init == -1)
     {
 	pa.init = 1;
-	pa.data_req = capture_channel_details (c, "data_req", channels);
-	pa.ack = capture_channel_details (c, "ack", channels);
-	pa.cmd = capture_channel_details (c, "cmd", channels);
-	pa.last_dat = capture_channel_details (c, "last_dat", channels);
-	pa.cntrl_busy = capture_channel_details (c, "cntrl_busy", channels);
+	pa.data_req = capture_channel_details ("data_req", channels);
+	pa.ack = capture_channel_details ("ack", channels);
+	pa.cmd = capture_channel_details ("cmd", channels);
+	pa.last_dat = capture_channel_details ("last_dat", channels);
+	pa.cntrl_busy = capture_channel_details ("cntrl_busy", channels);
     }
 
     if (!prev) // need it to detect edges

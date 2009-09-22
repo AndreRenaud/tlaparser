@@ -123,6 +123,7 @@ int main (int argc, char *argv[])
 	{"list-channels",	no_argument,		NULL,	'l'},
 	{"options",		required_argument,	NULL,	'o'},	
 	{"parser",		required_argument,	NULL,	'p'},
+        {NULL,                  0,                      NULL,   0},
     };    
     char *file, *parser = NULL;
     int dump = 0, list_channels = 0, changing = 0;

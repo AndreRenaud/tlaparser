@@ -105,13 +105,13 @@ void parse_ov3640(bulk_capture *b, char *filename, list_t *channels)
     capture *c, *prev;
     int i;
 
-    info.vsync = capture_channel_details(c, "vsync", channels);
-    info.href = capture_channel_details(c, "href", channels);
-    info.pclk = capture_channel_details(c, "pclk", channels);
-    info.gpio = capture_channel_details(c, "gpio", channels);
+    info.vsync = capture_channel_details("vsync", channels);
+    info.href = capture_channel_details("href", channels);
+    info.pclk = capture_channel_details("pclk", channels);
+    info.gpio = capture_channel_details("gpio", channels);
     for (i = 0; i < NR_DATA_BITS; i++) {
 	snprintf(name, sizeof(name), "d%d", i);
-	info.data[i] = capture_channel_details(c, name, channels);
+	info.data[i] = capture_channel_details(name, channels);
     }
 
     info.href_count = 0;

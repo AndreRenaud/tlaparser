@@ -239,21 +239,21 @@ void parse_pci (bulk_capture * b, char *filename, list_t * channels)
 	clock_hold_time = 0;
 
 	pa.init = 1;
-	pa.clk = capture_channel_details(c, "CLK", channels);
-	pa.par = capture_channel_details(c, "PAR", channels);
-	pa.nframe = capture_channel_details(c, "nFRAME", channels);
-	pa.ntrdy = capture_channel_details(c, "nTRDY", channels);
-	pa.nirdy = capture_channel_details(c, "nIRDY", channels);
-	pa.ndevsel = capture_channel_details(c, "nDEVSEL", channels);
+	pa.clk = capture_channel_details("CLK", channels);
+	pa.par = capture_channel_details("PAR", channels);
+	pa.nframe = capture_channel_details("nFRAME", channels);
+	pa.ntrdy = capture_channel_details("nTRDY", channels);
+	pa.nirdy = capture_channel_details("nIRDY", channels);
+	pa.ndevsel = capture_channel_details("nDEVSEL", channels);
 
 	for(i = 0; i < 32; i++) {
 	    sprintf(buffer, "AD%d", i);
-	    pa.pci_ad[i] = capture_channel_details(c, buffer, channels);
+	    pa.pci_ad[i] = capture_channel_details(buffer, channels);
 	}
 	
 	for(i = 0; i < 4; i++) {
 	    sprintf(buffer, "nCBE%d", i);
-	    pa.pci_cbe[i] = capture_channel_details(c, buffer, channels);
+	    pa.pci_cbe[i] = capture_channel_details(buffer, channels);
 	}
     }
     
