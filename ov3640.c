@@ -19,7 +19,7 @@
 #include "dumpdata.h"
 #include "common.h"
 
-#define NR_DATA_BITS	10
+#define NR_DATA_BITS	8
 
 static int data_pin_mapping[NR_DATA_BITS] = {5, 4, 6, 7, 11, 10, 9, 8, 3, 2};
 
@@ -43,19 +43,11 @@ static void write_pixel_data(capture *c)
 {
     int i, pixel;
     int set_bits = 0;
-    
-    pixel = 0;
-    for (i = 2; i < NR_DATA_BITS; i++) 
-	if (capture_bit(c, info.data[i])) {
-	    pixel |= (1 << (data_pin_mapping[i] - 2));
-	    set_bits++;
-	}
-    
-#if 0
-    if (set_bits > 7)
-	printf("**** ");
-    printf("pixel 0x%x\n", pixel);
-#endif
+
+    for (i = 0; i < NR_DATA_BITS; i++)
+	if (capture_bit(c, info.data[NR_DATA_BITS - 1 - i]))
+	    pixel |= (1 << i);
+        
     fwrite(&pixel, 1, 1, info.fd);
 }
 
@@ -69,7 +61,7 @@ static void parse_capture(capture *c, capture *prev, list_t *channels)
 
     /* FIXME - Not using vsync currently */
     active = capture_bit(c, info.gpio);
-    //if (active) {
+    if (active) {
 	if (capture_bit_transition(c, prev, info.href, 
 				   TRANSITION_low_to_high)) {
 	    /* Start of jpeg data block */
@@ -92,11 +84,11 @@ static void parse_capture(capture *c, capture *prev, list_t *channels)
 	    capture_bit(c, info.vsync) == 1 &&
 	    capture_bit_transition(c, prev, info.pclk,
 				   TRANSITION_low_to_high)) {
-	    //write_pixel_data(c);
+	    write_pixel_data(c);
 	    info.href_block_count++;
 	    info.total_pixels++;	    
 	}
-	//}
+    }
 }
 
 void parse_ov3640(bulk_capture *b, char *filename, list_t *channels)
@@ -105,13 +97,13 @@ void parse_ov3640(bulk_capture *b, char *filename, list_t *channels)
     capture *c, *prev;
     int i;
 
-    info.vsync = capture_channel_details("vsync", channels);
-    info.href = capture_channel_details("href", channels);
-    info.pclk = capture_channel_details("pclk", channels);
-    info.gpio = capture_channel_details("gpio", channels);
+    info.vsync = capture_channel_details(c, "vref", channels);
+    info.href = capture_channel_details(c, "href", channels);
+    info.pclk = capture_channel_details(c, "pclk", channels);
+    info.gpio = capture_channel_details(c, "frame", channels);
     for (i = 0; i < NR_DATA_BITS; i++) {
 	snprintf(name, sizeof(name), "d%d", i);
-	info.data[i] = capture_channel_details(name, channels);
+	info.data[i] = capture_channel_details(c, name, channels);
     }
 
     info.href_count = 0;
