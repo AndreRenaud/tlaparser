@@ -5,7 +5,7 @@
  * TLA parser for ov3640 image sensor
  *
  * Determine how many pixels per href are being sent, and output the jpeg data
- * to a file called dump.jpg. The gpio signal is used as a trigger point for 
+ * to a file called dump.jpg. The gpio signal is used as a trigger point for
  * the frame to be captured.
  *
  */
@@ -47,7 +47,7 @@ static void write_pixel_data(capture *c)
     for (i = 0; i < NR_DATA_BITS; i++)
 	if (capture_bit(c, info.data[NR_DATA_BITS - 1 - i]))
 	    pixel |= (1 << i);
-        
+
     fwrite(&pixel, 1, 1, info.fd);
 }
 
@@ -55,29 +55,29 @@ static void parse_capture(capture *c, capture *prev, list_t *channels)
 {
     static uint64_t this_time, prev_time;
     int active;
-    
+
     if (!prev)
 	return;
 
     /* FIXME - Not using vsync currently */
     active = capture_bit(c, info.gpio);
     if (active) {
-	if (capture_bit_transition(c, prev, info.href, 
+	if (capture_bit_transition(c, prev, info.href,
 				   TRANSITION_low_to_high)) {
 	    /* Start of jpeg data block */
 	    info.href_block_count = 0;
 	    prev_time = capture_time(c);
 	}
 
-	if (capture_bit_transition(c, prev, info.href, 
+	if (capture_bit_transition(c, prev, info.href,
 				   TRANSITION_high_to_low)) {
 	    /* End of jpeg data block */
 	    this_time = capture_time(c);
-	    printf("href %d has %d pixels, time since last: %lld\n", 
-		   info.href_count, info.href_block_count, 
+	    printf("href %d has %d pixels, time since last: %lld\n",
+		   info.href_count, info.href_block_count,
 		   this_time - prev_time);
 	    info.href_count++;
-	    
+
 	}
 
 	if (capture_bit(c, info.href) == 1 &&
@@ -86,7 +86,7 @@ static void parse_capture(capture *c, capture *prev, list_t *channels)
 				   TRANSITION_low_to_high)) {
 	    write_pixel_data(c);
 	    info.href_block_count++;
-	    info.total_pixels++;	    
+	    info.total_pixels++;
 	}
     }
 }
@@ -97,13 +97,13 @@ void parse_ov3640(bulk_capture *b, char *filename, list_t *channels)
     capture *c, *prev;
     int i;
 
-    info.vsync = capture_channel_details(c, "vref", channels);
-    info.href = capture_channel_details(c, "href", channels);
-    info.pclk = capture_channel_details(c, "pclk", channels);
-    info.gpio = capture_channel_details(c, "frame", channels);
+    info.vsync = capture_channel_details("vref", channels);
+    info.href = capture_channel_details("href", channels);
+    info.pclk = capture_channel_details("pclk", channels);
+    info.gpio = capture_channel_details("frame", channels);
     for (i = 0; i < NR_DATA_BITS; i++) {
 	snprintf(name, sizeof(name), "d%d", i);
-	info.data[i] = capture_channel_details(c, name, channels);
+	info.data[i] = capture_channel_details(name, channels);
     }
 
     info.href_count = 0;
@@ -120,7 +120,7 @@ void parse_ov3640(bulk_capture *b, char *filename, list_t *channels)
 	parse_capture(c, prev, channels);
 	prev = c;
     }
- 
+
     printf("%d total pixels\n", info.total_pixels);
     fclose(info.fd);
 }
