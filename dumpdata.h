@@ -21,6 +21,8 @@ enum {
     DISP_FLAG_none = 1 << 2,
     DISP_FLAG_default = 0,
     DISP_FLAG_both = DISP_FLAG_ebcdic | DISP_FLAG_ascii,
+
+    DISP_FLAG_full_data = 1 << 3,
 };
 
 

@@ -486,7 +486,7 @@ int time_log (capture *c, char *msg, ...)
             outtime (time_now - last_time, 6, 0);
 //             printf ("[%8.8lld] ", time_now - last_time);
         else
-            printf ("[None    ] ");
+            printf ("[None   ] ");
     }
     last_time = time_now;
 
@@ -551,12 +551,12 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
     linelen = col / 7;
 #endif
 
-    if (!flags)
+    if (!(flags & DISP_FLAG_both))
         flags = DISP_FLAG_ascii;
 
     linelen = 16;
 
-    if (flags == DISP_FLAG_both)
+    if ((flags & DISP_FLAG_both) == DISP_FLAG_both)
         linelen = 12;
     //linelen = 8; // just do 8 across
 
@@ -565,7 +565,7 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
     for (i = 0; i < len; i+=linelen)
     {
 	int this_len = min(linelen, len - i);
-	printf (" %3.3x:", i);
+	printf (" %4.4x:", i);
 	for (j = 0; j < this_len; j++)
 	    printf ("%2.2x ", buffer[i + j]);
 
@@ -597,13 +597,15 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
         }
 
         printf ("\n");
-        if (i == linelen * 4 && !skipped)
+        if (!(flags & DISP_FLAG_full_data) && i == linelen * 4 && !skipped)
         {
-            printf ("   <omitting buffer display as size 0x%x too large>\n", len);
+            int new_i;
+            new_i = max(i, (len / linelen - 4) * linelen);
+            if (new_i != i) {
+                printf ("   <omitting buffer display as size 0x%x too large>\n", len);
+                i = new_i;
+            }
             skipped = 1;
-//             i = len - (4 * linelen);
-//             i = i - (i / linelen);
-            i = (len / linelen - 4) * linelen;
         }
     }
 }

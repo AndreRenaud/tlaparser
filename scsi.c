@@ -237,6 +237,14 @@ static void decode_scsi_command (int phase, unsigned char *buf, int buffer_len, 
 
 
                     printf ("\tcode=%d length=%d\n", code, len);
+                    if (code == 0)
+                        printf("\tcode=block\n");
+                    else if (code == 1)
+                        printf("\tcode=filemark\n");
+                    else if (code == 2)
+                        printf("\tcode=sequential filemark\n");
+                    else if (code == 3)
+                        printf("\tcode=eod\n");
                     break;
                 }
 

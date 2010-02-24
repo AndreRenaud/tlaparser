@@ -88,9 +88,8 @@ struct pin_assignments
     channel_info *cntrl_busy;
 };
 
-static void parse_61k_cap (capture *c, list_t *channels)
+static void parse_61k_cap (capture *c, capture *prev, list_t *channels)
 {
-    static capture *prev = NULL;
     static struct pin_assignments pa = {-1};
     static unsigned char buffer[1024];
     static int buffer_pos = -1;
@@ -107,9 +106,6 @@ static void parse_61k_cap (capture *c, list_t *channels)
 	pa.cntrl_busy = capture_channel_details ("cntrl_busy", channels);
     }
 
-    if (!prev) // need it to detect edges
-	goto done;
-
     if (capture_bit_transition (c, prev, pa.cmd, TRANSITION_high_to_low))
     {
 	int cmd = get_data (c, channels);
@@ -118,7 +114,7 @@ static void parse_61k_cap (capture *c, list_t *channels)
 		command_name (fixup (cmd)), cmd, fixup (cmd));
     }
 
-    if (capture_bit_transition (c, prev, pa.data_req, TRANSITION_high_to_low) && 
+    if (capture_bit_transition (c, prev, pa.data_req, TRANSITION_high_to_low) &&
 	(capture_time (c) - last_data_req) > 50) // at least 50ns between, or else it is jitter
     {
 	uint8_t ch = get_data (c, channels);
@@ -144,24 +140,23 @@ static void parse_61k_cap (capture *c, list_t *channels)
 
     if (capture_bit (c, pa.cntrl_busy) != capture_bit (prev, pa.cntrl_busy))
 	time_log (c, "Unit gone %s\n", !capture_bit (c, pa.cntrl_busy) ? "busy" : "free");
-
-done:
-    prev = c;
 }
 
 void parse_61k (bulk_capture *b, char *filename, list_t *channels)
 {
     int i;
-    capture *c;
+    capture *c, *prev;
 
     printf ("61K analysis of file: '%s'\n", filename);
 
     c = b->data;
+    prev = c;
 
-    for (i = 0; i < b->length / sizeof (capture); i++)
+    for (i = 0; i < (b->length / sizeof (capture)) - 1; i++)
     {
-	parse_61k_cap (c, channels);
-	c++;
+        c++;
+	parse_61k_cap (c, prev, channels);
+        prev = c;
     }
 
     printf ("Parsed %d captures\n", b->length / sizeof (capture));
