@@ -44,6 +44,9 @@ OBJECTS+=ssc_audio.o
 CFLAGS+=-DPARSE_OV3640
 OBJECTS+=ov3640.o
 
+CFLAGS+=-DPARSE_UNFORMATTED
+OBJECTS+=cook_unformatted.o
+
 default: tlaparser
 
 %.o: %.c $(HEADERS)

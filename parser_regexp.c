@@ -21,7 +21,7 @@ static void extract_match (regmatch_t *match, char *buffer, char *result)
 
 static void add_group (char *name, char *members)
 {
-    log ("Found group: '%s' '%s'", name, members);
+    //log ("Found group: '%s' '%s'", name, members);
 #warning "Not doing anything with the group information at this stage"
 }
 
@@ -53,7 +53,7 @@ bulk_capture *tla_parse_file (char *file_name)
 
     current_group[0] = '\0';
 
-    while ((here = ftell (fp)) != -1 && 
+    while ((here = ftell (fp)) != -1 &&
            fgets (buffer, sizeof (buffer), fp) != NULL)
     {
         if (regexec (&channel, buffer, 3, pmatch, 0) == 0)
@@ -79,9 +79,9 @@ bulk_capture *tla_parse_file (char *file_name)
 
         if (regexec (&data_set, buffer, 3, pmatch, 0) == 0)
         {
-            if (strstr (current_data_set, "HiRes") != NULL)
-                log ("Skipping data for dataset '%s', since it is High Res", current_data_set);
-            else
+            if (strstr (current_data_set, "HiRes") != NULL) {
+                //log ("Skipping data for dataset '%s', since it is High Res", current_data_set);
+            } else
             {
                 int len_length, len;
                 char length[20];
@@ -95,7 +95,7 @@ bulk_capture *tla_parse_file (char *file_name)
                 len = atoi (length);
 
 #if 0
-                log ("Data set of length: %d (%s, %d) %s", 
+                log ("Data set of length: %d (%s, %d) %s",
                         len_length, length, len, current_data_set);
 #endif
 
@@ -131,7 +131,7 @@ bulk_capture *tla_parse_file (char *file_name)
             if (strcmp (cell_name, "DaBytesPerSample") == 0 && !strstr (current_data_set, "HiRes"))
                 if (value != sizeof (capture))
                     fprintf (stderr, "Warning: Capture sizes don't line up: %d != %d\n"
-                                     "Perhaps this TLA file is for a different logic analyser configuration?\n", 
+                                     "Perhaps this TLA file is for a different logic analyser configuration?\n",
                                      value, sizeof (capture));
 #if 0
             if (strcmp (cell_name, "DaNumSamples") == 0)

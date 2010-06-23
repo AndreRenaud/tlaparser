@@ -231,14 +231,12 @@ int capture_bit_change (capture *cur, capture *prev, channel_info *chan)
 {
     int n, p;
 
-    if (!chan)
+    if (!chan) {
+        fprintf(stderr, "No channels\n");
         return -1;
+    }
     p = capture_bit (prev, chan);
-    if (p < 0)
-        return -1;
     n = capture_bit (cur, chan);
-    if (n < 0)
-        return -1;
     if (n && !p)
         return TRANSITION_low_to_high;
     if (!n && p)
@@ -251,7 +249,7 @@ int capture_bit_transition (capture *cur, capture *prev, channel_info *chan, int
 {
     int dir = capture_bit_change (cur, prev, chan);
 
-    return dir == -1 ? dir : dir == want_dir;
+    return dir == want_dir;
 #if 0
     int n, p;
     if (!chan)
@@ -483,10 +481,10 @@ int time_log (capture *c, char *msg, ...)
 
 
         if (last_time != -1)
-            outtime (time_now - last_time, 6, 0);
+            outtime (time_now - last_time, 7, 0);
 //             printf ("[%8.8lld] ", time_now - last_time);
         else
-            printf ("[None   ] ");
+            printf ("[None    ] ");
     }
     last_time = time_now;
 
@@ -552,7 +550,7 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
 #endif
 
     if (!(flags & DISP_FLAG_both))
-        flags = DISP_FLAG_ascii;
+        flags |= DISP_FLAG_ascii;
 
     linelen = 16;
 

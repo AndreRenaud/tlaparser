@@ -26,6 +26,7 @@ struct parser_info parsers[] = {
     {parse_8250,	"8250",		"8250 uart bus"},
     {parse_kennedy,	"kennedy",	"Kennedy tape drive bus"},
     {parse_pertec,	"pertec",	"Pertec tape drive bus"},
+    {parse_unformatted, "unformatted",  "Cook Unformatted tape drive bus"},
     {parse_scsi,	"scsi",		"SCSI bus"},
     {parse_xd,		"xd",		"xD/NAND data bus"},
     {parse_pci,		"pci",		"PCI bus"},
@@ -42,17 +43,17 @@ static void usage (char *prog)
 {
     int i;
     fprintf(stderr, "Usage: %s [options] tlafile\n", prog);
-    fprintf(stderr, 
+    fprintf(stderr,
 	    "  -d, --dump             : Dump file contents\n"
 	    "  -l, --list-channels    : Dump channel names\n"
 	    "  -b, --bits             : Dump changing bits\n"
 	    "  -o, --optiosn=OPTIONS  : List of comma separated options (ie: opt1,opt2=foo,opt3)\n"
 	    "  -p, --parser=PARSER    : Parser to use\n"
 	    );
-    
+
     printf("\nAvailable parsers:\n");
     for (i = 0; i < NPARSERS; i++)
-	printf ("  %-10s             : %s\n", 
+	printf ("  %-10s             : %s\n",
 		parsers[i].code_name, parsers[i].description);
 }
 
@@ -116,20 +117,20 @@ int option_val (char *name, char *buffer, int buff_len)
 
 int main (int argc, char *argv[])
 {
-    const char *short_options = "dblo:p:"; 
+    const char *short_options = "dblo:p:";
     const struct option long_options[] = {
 	{"dump",		no_argument,		NULL,	'd'},
 	{"bits",		no_argument,		NULL,	'b'},
 	{"list-channels",	no_argument,		NULL,	'l'},
-	{"options",		required_argument,	NULL,	'o'},	
+	{"options",		required_argument,	NULL,	'o'},
 	{"parser",		required_argument,	NULL,	'p'},
         {NULL,                  0,                      NULL,   0},
-    };    
+    };
     char *file, *parser = NULL;
     int dump = 0, list_channels = 0, changing = 0;
     bulk_capture *cap = NULL;
     int parse_func = -1;
-    
+
     int i;
 
     while (1) {
