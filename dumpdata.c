@@ -558,6 +558,9 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
         linelen = 12;
     //linelen = 8; // just do 8 across
 
+    if (flags & DISP_FLAG_invert)
+        linelen = 8;
+
     printf ("Data length: 0x%x (%d)\n", len, len);
 
     for (i = 0; i < len; i+=linelen)
@@ -584,6 +587,14 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
 
             printf ("%*s'", (linelen - this_len), "");
         }
+
+        if (flags & DISP_FLAG_invert) {
+            printf("  ");
+            for (j = 0; j < this_len; j++)
+                printf ("%2.2x ", buffer[i + j] ^ 0xff);
+            printf ("%*s", (linelen - this_len) * 3, "");
+        }
+
         if (flags & DISP_FLAG_ebcdic) {
             printf (" '");
             for (j = 0; j < this_len; j++) {
@@ -592,7 +603,18 @@ void display_data_buffer (unsigned char *buffer, int len, int flags)
             }
 
             printf ("%*s'", (linelen - this_len), "");
+
+            if (flags & DISP_FLAG_invert) {
+                printf (" '");
+                for (j = 0; j < this_len; j++) {
+                    unsigned char ch = ebcdic_to_ascii[buffer[i + j] ^ 0xff];
+                    printf ("%c", printable_char (ch));
+                }
+                printf ("%*s'", (linelen - this_len), "");
+            }
+
         }
+
 
         printf ("\n");
         if (!(flags & DISP_FLAG_full_data) && i == linelen * 4 && !skipped)
