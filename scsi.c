@@ -77,6 +77,9 @@ typedef struct scsi_info
     /** show only transactions relating to this device */
     int active_device;
 
+    /** Write a simple summary to this file - used to create test cases */
+    FILE *summary;
+
 } scsi_info;
 
 
@@ -165,7 +168,7 @@ static const char *scsi_phase (int phase)
 }
 
 
-static void decode_scsi_command (int phase, unsigned char *buf, int buffer_len, int last_phase_command)
+static void decode_scsi_command (FILE *summary, int phase, unsigned char *buf, int buffer_len, int last_phase_command)
 {
     switch (phase)
     {
@@ -212,6 +215,15 @@ static void decode_scsi_command (int phase, unsigned char *buf, int buffer_len, 
 	{
 	    int cmd = buf[0];
             int ctrl = buf[buffer_len - 1];
+            if (summary) {
+                int i;
+                fprintf(summary, "Command: %s [",
+                            scsi_command_name(cmd));
+                for (i = 0; i < buffer_len; i++)
+                    fprintf(summary, "%2.2x%c",
+                        buf[i], i == buffer_len - 1 ? ']' : ' ');
+                fprintf(summary, "\n");
+            }
 	    printf ("\t%s [%d 0x%x] %s\n", scsi_command_name (cmd), cmd, cmd,
                     (ctrl & 0x01) ? "linked" : "");
 	    switch (cmd)
@@ -361,15 +373,15 @@ void scsi_init (scsi_info *scsi, list_t *channels)
     int i;
 
     scsi->channels = channels;
-    scsi->nbsy = capture_channel_details ("nbsy", channels);
-    scsi->nack = capture_channel_details ("nack", channels);
-    scsi->nreq = capture_channel_details ("nreq", channels);
-    scsi->nsel = capture_channel_details ("nsel", channels);
-    scsi->nrst = capture_channel_details ("nrst", channels);
-    scsi->nio = capture_channel_details ("nio", channels);
-    scsi->nmsg = capture_channel_details ("nMSG", channels);
-    scsi->ncd = capture_channel_details ("nCD", channels);
-    scsi->natn = capture_channel_details ("natn", channels);
+    scsi->nbsy = capture_channel_details ("bsy", channels);
+    scsi->nack = capture_channel_details ("ack", channels);
+    scsi->nreq = capture_channel_details ("req", channels);
+    scsi->nsel = capture_channel_details ("sel", channels);
+    scsi->nrst = capture_channel_details ("rst", channels);
+    scsi->nio = capture_channel_details ("io", channels);
+    scsi->nmsg = capture_channel_details ("MSG", channels);
+    scsi->ncd = capture_channel_details ("CD", channels);
+    scsi->natn = capture_channel_details ("atn", channels);
 
     if (scsi->debug_pins) for (i = 0; i < 4; i++)
     {
@@ -397,6 +409,24 @@ void scsi_init (scsi_info *scsi, list_t *channels)
     sprintf(name, "d%sp", base);
     scsi->data [8] = capture_channel_details (name, channels);
 
+    /* For positive logic, they are the reverse of single ended,
+     * use this for differential & direct probing of
+     * mictors on gurnard */
+    if (option_set("positive")) {
+        scsi->nbsy->inverted = 1;
+        scsi->nack->inverted = 1;
+        scsi->nreq->inverted = 1;
+        scsi->nsel->inverted = 1;
+        scsi->nrst->inverted = 1;
+        scsi->nio->inverted = 1;
+        scsi->nmsg->inverted = 1;
+        scsi->ncd->inverted = 1;
+        scsi->natn->inverted = 1;
+        for (i = 0; i < 9; i++)
+            scsi->data[i]->inverted = 1;
+    }
+
+
     scsi->last_phase = -1;
     scsi->current_devices [0] = -1;
     scsi->current_devices [1] = -1;
@@ -422,7 +452,7 @@ static void check_phase (scsi_info *scsi, capture *c)
     {
         long long elapsed = capture_time (c) - capture_time (scsi->last_phase_capture);
 //         time_log (c, "capture change elapsed %lld\n", elapsed);
-        if (elapsed > 10)
+        if (elapsed > 100)
             phase_changed = 1;
     }
     if (phase_changed) {
@@ -433,7 +463,7 @@ static void check_phase (scsi_info *scsi, capture *c)
             /* report time when data capture started rather than current time c
         so that the user doesn't get confused */
         if (scsi->last_valid_phase == 2)
-            decode_scsi_command (scsi->last_valid_phase, scsi->buffer, scsi->buffer_len, scsi->last_phase_command);
+            decode_scsi_command (scsi->summary, scsi->last_valid_phase, scsi->buffer, scsi->buffer_len, scsi->last_phase_command);
         if (scsi->detect_glitches && (scsi->longest_req_glitch || scsi->longest_unreq_glitch))
             time_log (c, "longest_req_glitch = %d, longest_unreq_glitch = %d\n",
                         scsi->longest_req_glitch, scsi->longest_unreq_glitch);
@@ -449,6 +479,17 @@ static void check_phase (scsi_info *scsi, capture *c)
                 time_log (c, "counts: nreq=0x%x, nack=0x%x\n",
                     scsi->nreq_count, scsi->nack_count);
             display_data_buffer (scsi->buffer, scsi->buffer_len, DISP_FLAG_both);
+            // print data in
+            if (scsi->summary &&
+                (scsi->last_valid_phase == 1 || scsi->last_valid_phase == 0)) {
+                int i;
+                fprintf(scsi->summary, "%d %s of unit\n", scsi->buffer_len,
+                scsi->last_valid_phase ? "out" : "in");
+                for (i = 0; i < scsi->buffer_len; i++)
+                    fprintf(scsi->summary, "%2.2x%s", scsi->buffer[i],
+                        (i % 16) == 15 ? "\n" : " ");
+                fprintf(scsi->summary, "\n");
+            }
         }
         time_log (scsi->last_phase_capture, "Phase: %s (%d atn=%d)\n",
                   scsi_phases [scsi->last_phase], scsi->last_phase,
@@ -510,8 +551,8 @@ static int handle_select (scsi_info *scsi, capture *c)
             else if (ch & ~(1 << dev1 | 1 << dev2))
                 time_log (c, "More than 2 devices selected in 0x%2.2x\n", ch);
             else
-                time_log (c, "Selected device: 0x%2.2x (dev1: %d dev2: %d)\n",
-                        ch, dev1, dev2);
+                time_log (c, "Selected device: 0x%2.2x (dev1: %d dev2: %d active: %d)\n",
+                        ch, dev1, dev2, scsi->active_device);
         }
     }
 
@@ -524,9 +565,9 @@ static int handle_select (scsi_info *scsi, capture *c)
             time_log (c, "DBG %d change: %d\n", i, capture_bit (c, scsi->dbg[i]));
     }
 
-    return scsi->active_device == -1
-        || scsi->current_devices[0] == scsi->active_device
-        || scsi->current_devices[1] == scsi->active_device;
+    return (scsi->active_device == -1)
+        || (scsi->current_devices[0] == scsi->active_device)
+        || (scsi->current_devices[1] == scsi->active_device);
 }
 
 
@@ -713,7 +754,7 @@ static int handle_data (scsi_info *scsi, capture *c)
     {
         if (scsi->data_state == STATE_requesting)
         {
-            int len = capture_time (c) - scsi->time_reqed;
+            int len = capture_time (c) - capture_time(scsi->time_reqed);
 
             scsi->data_state = STATE_idle;  // it was just a glitch
             if (scsi->detect_glitches)
@@ -769,21 +810,22 @@ static void parse_scsi_cap (scsi_info *scsi, capture *c, list_t *channels, int l
     capture *prev = scsi->prev;
     capture *cdata;
     int phase;
+    //printf("waiting: %d\n", scsi->waiting_for_idle);
 
     if (scsi->waiting_for_idle)
     {
         // wait until we see all these lines high before starting
-        if (!capture_bit (c, scsi->nsel)
-            || !capture_bit (c, scsi->nbsy)
-            || !capture_bit (c, scsi->natn)
-            || !capture_bit (c, scsi->nmsg)
-            || !capture_bit (c, scsi->nio)
-            || !capture_bit (c, scsi->ncd))
+        if (capture_bit (c, scsi->nsel) &&
+            capture_bit (c, scsi->nbsy) &&
+            capture_bit (c, scsi->natn) &&
+            capture_bit (c, scsi->nmsg) &&
+            capture_bit (c, scsi->nio) &&
+            capture_bit (c, scsi->ncd))
             goto out;
         scsi->waiting_for_idle = 0;
     }
 
-//     time_log (c, "nbsy=%d, data=%x, \n", capture_bit (c, scsi->nbsy), get_data (scsi, c));
+     //time_log (c, "nbsy=%d, data=%x, \n", capture_bit (c, scsi->nbsy), get_data (scsi, c));
     check_phase (scsi, c);
 
     // do select / arbitration processing - returns 0 if this transaction is not for us
@@ -884,12 +926,17 @@ void parse_scsi (bulk_capture *b, char *filename, list_t *channels)
 
     if (option_val ("device", buffer, 10))
         scsi.active_device = strtoul (buffer, NULL, 0);
-
+    printf("device: %d\n", scsi.active_device);
     if (option_set ("glitch"))
         scsi.detect_glitches = 1;
 
     if (option_set ("debug"))
         scsi.debug_pins = 1;
+
+    if (option_val ("summary", buffer, 100)) {
+        printf("Saving log to %s\n", buffer);
+        scsi.summary = fopen(buffer, "wb");
+    }
 
     c = b->data;
 
@@ -901,4 +948,7 @@ void parse_scsi (bulk_capture *b, char *filename, list_t *channels)
 	parse_scsi_cap (&scsi, c, channels, i == (b->length / sizeof (capture)) - 1);
         scsi.prev = c;
     }
+
+    if (scsi.summary)
+        fclose(scsi.summary);
 }

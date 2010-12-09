@@ -29,6 +29,9 @@ OBJECTS+=kennedy.o
 CFLAGS+=-DPARSE_SPI
 OBJECTS+=spi.o
 
+CFLAGS+=-DPARSE_FETEX
+OBJECTS+=fetex.o
+
 CFLAGS+=-DPARSE_NOR
 OBJECTS+=nor.o
 
@@ -46,6 +49,9 @@ OBJECTS+=ov3640.o
 
 CFLAGS+=-DPARSE_UNFORMATTED
 OBJECTS+=cook_unformatted.o
+
+CFLAGS+=-DPARSE_HALFFORMATTED
+OBJECTS+=cook_half_formatted.o
 
 default: tlaparser
 

@@ -27,10 +27,12 @@ struct parser_info parsers[] = {
     {parse_kennedy,	"kennedy",	"Kennedy tape drive bus"},
     {parse_pertec,	"pertec",	"Pertec tape drive bus"},
     {parse_unformatted, "unformatted",  "Cook Unformatted tape drive bus"},
+    {parse_half_formatted, "halfformatted",  "Cook Half formatted tape drive bus"},
     {parse_scsi,	"scsi",		"SCSI bus"},
     {parse_xd,		"xd",		"xD/NAND data bus"},
     {parse_pci,		"pci",		"PCI bus"},
     {parse_spi,		"spi",		"SPI bus"},
+    {parse_fetex,	"fetex",	"Low Level Fetex-150 MTU bus"},
     {parse_nor,		"nor",		"NOR flash"},
     {parse_dm9000,	"dm9000",	"DM9000"},
     {parse_camera, 	"camera",	"Camera"},
@@ -47,7 +49,7 @@ static void usage (char *prog)
 	    "  -d, --dump             : Dump file contents\n"
 	    "  -l, --list-channels    : Dump channel names\n"
 	    "  -b, --bits             : Dump changing bits\n"
-	    "  -o, --optiosn=OPTIONS  : List of comma separated options (ie: opt1,opt2=foo,opt3)\n"
+	    "  -o, --option=OPTIONS  : List of comma separated options (ie: opt1,opt2=foo,opt3)\n"
 	    "  -p, --parser=PARSER    : Parser to use\n"
 	    );
 

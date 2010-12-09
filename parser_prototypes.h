@@ -17,6 +17,8 @@ void parse_camera (bulk_capture *b, char *filename, list_t *channels);
 void parse_ssc_audio (bulk_capture *b, char *filename, list_t *channels);
 void parse_ov3640 (bulk_capture *b, char *filename, list_t *channels);
 void parse_unformatted (bulk_capture *b, char *filename, list_t *channels);
+void parse_half_formatted (bulk_capture *b, char *filename, list_t *channels);
+void parse_fetex (bulk_capture *b, char *filename, list_t *channels);
 
 #endif
 
