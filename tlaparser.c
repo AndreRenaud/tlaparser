@@ -49,7 +49,7 @@ static void usage (char *prog)
 	    "  -d, --dump             : Dump file contents\n"
 	    "  -l, --list-channels    : Dump channel names\n"
 	    "  -b, --bits             : Dump changing bits\n"
-	    "  -o, --option=OPTIONS  : List of comma separated options (ie: opt1,opt2=foo,opt3)\n"
+	    "  -o, --options=OPTIONS  : List of comma separated options (ie: opt1,opt2=foo,opt3)\n"
 	    "  -p, --parser=PARSER    : Parser to use\n"
 	    );
 
