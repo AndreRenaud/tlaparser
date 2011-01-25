@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <stdint.h>
 #include <stdlib.h>
+#define __USE_GNU
 #define _GNU_SOURCE
 #include <string.h>
 #include <arpa/inet.h>
@@ -161,9 +162,10 @@ unsigned int capture_data(capture *cap, channel_info *c[], int len)
     return data;
 }
 
-static void simplify_probe_name (char *probe_name, char *result)
+static void simplify_probe_name (const char *probe_name, char *result)
 {
-    char *p, *r;
+    const char *p;
+    char *r;
 
     for (p = probe_name, r = result; *p; p++)
     {
@@ -184,7 +186,10 @@ channel_info *capture_channel_details (char *channel_name_full, list_t *channels
     list_t *n;
     char channel_name[100];
     char probe_name[100];
+    channel_info *retval = NULL;
+    int len;
 
+    //strcpy(channel_name, channel_name_full);
     simplify_probe_name (channel_name_full, channel_name);
 
     /* Do they exactly match */
@@ -194,9 +199,31 @@ channel_info *capture_channel_details (char *channel_name_full, list_t *channels
 	simplify_probe_name (c->name, probe_name);
 	//printf ("Comparing '%s' to '%s'\n", probe_name, channel_name);
 
-	if (strcasecmp (probe_name, channel_name) == 0)
-	    return c;
+	if (strcasecmp (probe_name, channel_name) == 0) {
+            retval = c;
+            goto out;
+        }
     }
+
+    /* Is it a suffix? */
+    len = strlen(channel_name);
+    for (n = channels; n!= NULL; n = n->next)
+    {
+	channel_info *c = n->data;
+        int this_len;
+
+	simplify_probe_name (c->name, probe_name);
+
+        this_len = strlen(probe_name);
+        if (this_len < len)
+            continue;
+	//printf ("Suffix Comparing '%s' to '%s'\n", probe_name, channel_name);
+        if (strcasecmp(&probe_name[this_len - len], channel_name) == 0) {
+            retval = c;
+            goto out;
+        }
+    }
+
 
     /* Do they partially match */
     for (n = channels; n!= NULL; n = n->next)
@@ -205,14 +232,26 @@ channel_info *capture_channel_details (char *channel_name_full, list_t *channels
 	simplify_probe_name (c->name, probe_name);
 	//printf ("Comparing '%s' to '%s'\n", probe_name, channel_name);
 
-	if (strcasestr (probe_name, channel_name))
-	    return c;
-	if (strcasestr (channel_name, probe_name))
-	    return c;
+	if (strcasestr (probe_name, channel_name)) {
+            retval = c;
+            goto out;
+        }
+	if (strcasestr (channel_name, probe_name)) {
+            retval = c;
+            goto out;
+        }
     }
 
     printf ("Unknown channel: %s\n", channel_name);
     return NULL;
+out:
+#if 0
+    if (strcasecmp(retval->name, channel_name_full) != 0)
+        printf("Using name '%s' in place of '%s\n",
+            retval->name, channel_name_full);
+#endif
+    return retval;
+
 }
 
 
