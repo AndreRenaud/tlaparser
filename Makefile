@@ -56,11 +56,11 @@ OBJECTS+=cook_half_formatted.o
 default: tlaparser
 
 %.o: %.c $(HEADERS)
-	@echo "\tCC $<"
+	@echo "  CC $<"
 	@$(CC) -c -o $@ $< $(CFLAGS)
 
 tlaparser: $(OBJECTS)
-	@echo "\tLD $@"
+	@echo "  LD $@"
 	@$(CC) -o $@ $(OBJECTS) $(LDFLAGS)
 
 clean:
