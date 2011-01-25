@@ -9,7 +9,7 @@ enum
 {
     TRANSITION_none,
     TRANSITION_low_to_high = 1,
-    TRANSITION_high_to_low = -1,
+    TRANSITION_high_to_low = 2,
 
     TRANSITION_falling_edge = TRANSITION_high_to_low,
     TRANSITION_rising_edge = TRANSITION_low_to_high,
