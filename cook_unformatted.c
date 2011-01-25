@@ -17,20 +17,20 @@ struct unformatted_info
     channel_info *write[9];
 };
 
-static int get_read_data(capture *c, struct unformatted_info *info)
+static unsigned int get_read_data(capture *c, struct unformatted_info *info)
 {
     int i;
-    int result = 0;
+    unsigned int result = 0;
 
     for (i = 0; i < 9; i++)
         result |= capture_bit(c, info->read[i]) ? 0 : 1 << i;
     return result;
 }
 
-static int get_write_data(capture *c, struct unformatted_info *info)
+static unsigned int get_write_data(capture *c, struct unformatted_info *info)
 {
     int i;
-    int result = 0;
+    unsigned int result = 0;
 
     for (i = 0; i < 9; i++)
         result |= capture_bit(c, info->write[i]) ? 0 : 1 << i;
@@ -53,18 +53,18 @@ static void parse_unformatted_cap(capture *c, list_t *channels)
 
     if (info.init == 0) {
         char name[20];
-        info.fwd = capture_channel_details("IO_DEV[15]_FWD", channels);
-        info.rev = capture_channel_details("IO_DEV[16]_REV", channels);
-        info.wsel = capture_channel_details("IO_DEV[19]_WSEL", channels);
-        info.rds = capture_channel_details("IO_DEV[12]_RDS", channels);
-        info.wds = capture_channel_details("IO_DEV[27]_WDS", channels);
+        info.fwd = capture_channel_details("FWD", channels);
+        info.rev = capture_channel_details("REV", channels);
+        info.wsel = capture_channel_details("WSEL", channels);
+        info.rds = capture_channel_details("RDS", channels);
+        info.wds = capture_channel_details("WDS", channels);
 
         for (i = 0; i < 9; i++) {
-            sprintf(name, "IO_DEV[%2.2d]", read_index[i]);
+            sprintf(name, "RD%c", i < 8 ? '0' + i : 'P');
             info.read[i] = capture_channel_details(name, channels);
         }
         for (i = 0; i < 9; i++) {
-            sprintf(name, "IO_DEV[%2.2d]", write_index[i]);
+            sprintf(name, "WD%c", i < 8 ? '0' + i : 'P');
             info.write[i] = capture_channel_details(name, channels);
         }
 
@@ -80,19 +80,21 @@ static void parse_unformatted_cap(capture *c, list_t *channels)
             in_write = 1;
         else if (change == TRANSITION_low_to_high) {
             if (read_data_pos && write_data_pos) {
-                if (memcmp(read_data, write_data, 
+                if (memcmp(read_data, write_data,
                             min(read_data_pos, write_data_pos) * 2)) {
                     time_log(c, "Data mismatch in read/write data up to %d\n",
                         min(read_data_pos, write_data_pos));
                 }
             }
             if (read_data_pos) {
-                display_data_buffer((unsigned char *)read_data, 
+                time_log(c, "Read Data:\n");
+                display_data_buffer((unsigned char *)read_data,
                         read_data_pos * 2, DISP_FLAG_full_data);
                 read_data_pos = 0;
             }
             if (write_data_pos) {
-                display_data_buffer((unsigned char *)write_data, 
+                time_log(c, "Write Data:\n");
+                display_data_buffer((unsigned char *)write_data,
                         write_data_pos * 2, DISP_FLAG_full_data);
                 write_data_pos = 0;
             }
@@ -101,12 +103,11 @@ static void parse_unformatted_cap(capture *c, list_t *channels)
         time_log(c, "WSel change: %d %s\n", change, in_write ? "Start" : "Stop");
     }
 
-    if (in_write) {
-        if (capture_bit_transition(c, prev, info.rds, TRANSITION_rising_edge))
-            read_data[read_data_pos++] = get_read_data(c, &info);
+    if (capture_bit(c, info.wsel))
         if (capture_bit_transition(c, prev, info.wds, TRANSITION_rising_edge))
             write_data[write_data_pos++] = get_write_data(c, &info);
-    }
+    if (capture_bit_transition(c, prev, info.rds, TRANSITION_rising_edge))
+        read_data[read_data_pos++] = get_read_data(c, &info);
 
     if (capture_bit_change(c, prev, info.fwd))
         time_log(c, "FWD Change: %d\n", capture_bit_change(c, prev, info.fwd));
@@ -124,7 +125,7 @@ void parse_unformatted(bulk_capture *b, char *filename, list_t *channels)
     capture *c;
 
     printf("Unformatted analysis of '%s'\n", filename);
-    
+
     c = b->data;
 
     for (i = 0; i < b->length / sizeof(capture); i++) {
