@@ -33,6 +33,7 @@ struct parser_info parsers[] = {
     {parse_pci,		"pci",		"PCI bus"},
     {parse_spi,		"spi",		"SPI bus"},
     {parse_fetex,	"fetex",	"Low Level Fetex-150 MTU bus"},
+    {parse_oreo_fpga,	"oreo",	        "Parse Oreo FPGA/SPI/GPS sync"},
     {parse_nor,		"nor",		"NOR flash"},
     {parse_dm9000,	"dm9000",	"DM9000"},
     {parse_camera, 	"camera",	"Camera"},
