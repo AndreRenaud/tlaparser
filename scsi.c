@@ -393,16 +393,16 @@ void scsi_init (scsi_info *scsi, list_t *channels)
     char *base = NULL;
 
     // automatically determine data names
-    if (capture_channel_details("d<0>", channels))
+    if (capture_channel_details("d0", channels))
         base = "";
-    else if (capture_channel_details("db<0>", channels))
+    else if (capture_channel_details("db0", channels))
         base = "b";
     else
         fprintf (stderr, "Unable to determine base for data channels\n");
 
     for (i = 0; i < 8; i++)
     {
-        sprintf (name, "d%s<%d>", base, i);
+        sprintf (name, "d%s%d", base, i);
         //bit = capture_bit_name (c, name, channels) ? 1 : 0; // normal logic
         scsi->data [i] = capture_channel_details (name, channels);
     }
@@ -949,6 +949,8 @@ void parse_scsi (bulk_capture *b, char *filename, list_t *channels)
         scsi.prev = c;
     }
 
+    if (scsi.buffer_len)
+        display_data_buffer (scsi.buffer, scsi.buffer_len, DISP_FLAG_both);
     if (scsi.summary)
         fclose(scsi.summary);
 }
