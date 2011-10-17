@@ -36,12 +36,18 @@ static int dump_single_capture (capture *c, capture *prev_cap)
 uint64_t capture_time (capture *c)
 {
     uint64_t t, b;
+    if (!c)
+        return 0;
     t = ntohl (c->time_top) & 0xffff; // not sure what the story is here, packed data isn't all time stamp
     //t = 0;
     b = ntohl (c->time_bottom);
-
+#if CAPTURE_DATA_BYTES == 14 // for the TLA 714
+    // timings are in 1/2th of a micro-second, so change it into micro seconds
+    return (t << 32 | b) / 2;
+#else
     // timings are in 1/8th of a micro-second, so change it into micro seconds
     return (t << 32 | b) / 8;
+#endif
 }
 
 void dump_channel_list (list_t *channels)
