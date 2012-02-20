@@ -634,7 +634,7 @@ static capture *handle_data (scsi_info *scsi, capture *c)
                 /* this means nreq has gone low and high without nack changing.
                    Probably this is a synchronous transfer */
                 scsi->sync = 1;
-                time_log (c, "syncronous data detected, buffer_len = %d\n", scsi->buffer_len);
+                time_log (c, "synchronous data detected, buffer_len = %d\n", scsi->buffer_len);
 
                 // count the transition we have already seen
                 scsi->nreq_count++;
@@ -949,8 +949,12 @@ void parse_scsi (bulk_capture *b, char *filename, list_t *channels)
         scsi.prev = c;
     }
 
-    if (scsi.buffer_len)
+    if (scsi.buffer_len) {
+        if (scsi.sync)
+            time_log (scsi.prev, "counts: nreq=0x%x, nack=0x%x\n",
+                    scsi.nreq_count, scsi.nack_count);
         display_data_buffer (scsi.buffer, scsi.buffer_len, DISP_FLAG_both);
+    }
     if (scsi.summary)
         fclose(scsi.summary);
 }
