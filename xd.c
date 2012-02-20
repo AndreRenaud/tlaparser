@@ -17,22 +17,21 @@
 #define DATA_PREFIX "md"
 #define NWE_NAME "nfweb"
 #define NRE_NAME "nfreb"
-#elif 1 // snapper9260
+#elif 0 // snapper9260
 #define ALE_NAME "ale"
 #define CLE_NAME "cle"
 #define NCE_NAME "ncs"
 #define DATA_PREFIX "d"
 #define NWE_NAME "nwe"
 #define NRE_NAME "nre"
+#elif 1 // gurnard fpga
+#define ALE_NAME "ale"
+#define CLE_NAME "cle"
+#define NCE_NAME "ce0"
+#define DATA_PREFIX "d"
+#define NWE_NAME "nwe"
+#define NRE_NAME "nre1"
 #endif
-
-
-static uint8_t printable_char (int data)
-{
-    if (data >= ' ' && data <= 126)
-	return data;
-    return '.';
-}
 
 static uint8_t xd_data (capture *c, list_t *channels)
 {
@@ -85,6 +84,10 @@ static char *nand_command (unsigned int command)
 	    return "ID Read (3)";
         case 0x31:
             return "Page Read Cache Mode Start";
+        case 0xef:
+            return "Set Features";
+        case 0xee:
+            return "Get features";
 	default:
 	    return "Unknown";
     }
@@ -101,9 +104,9 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 
 #define DUMP_DATA() do {if (data_len) { \
                             if (address != -1) \
-                                printf ("Address: 0x%llx (Block: 0x%llx, Page: 0x%llx, Byte: 0x%llx)\n", \
+                                time_log(c, "Address: 0x%llx (Block: 0x%llx, Page: 0x%llx, Byte: 0x%llx)\n", \
                                     address, address >> 22, (address >> 16) & 0x1f, (address & 0xffff)); \
-                            display_data_buffer (data_buffer, data_len, 0);  \
+                            display_data_buffer (data_buffer, data_len, DISP_FLAG_full_data);  \
                             data_len = 0; \
                             address = -1; \
                             } \
@@ -112,7 +115,7 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
     if (!capture_bit_name (c, NCE_NAME, channels)) // we're accessing xD
     {
 #if 0
-	printf ("nce: %d %d %d\n", 
+	time_log(c, "nce: %d %d %d\n",
 		capture_bit_name (c, ALE_NAME, channels),
 		capture_bit_name (c, CLE_NAME, channels),
 		capture_bit_name (c, NWE_NAME, channels));
@@ -127,7 +130,7 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
                     address = (address << 8) | data;
             } else if (capture_bit_name (c, CLE_NAME, channels)) {
                 DUMP_DATA ();
-                printf ("Command: %s (0x%x)\n", nand_command (data), data);
+                time_log(c, "Command: %s (0x%x)\n", nand_command (data), data);
             } else {
                 data_buffer[data_len++] = data;
             }
@@ -136,9 +139,9 @@ static void parse_xd_cap (capture *c, capture *prev, list_t *channels)
 	if (capture_bit_transition_name (c, prev, NRE_NAME, channels, TRANSITION_low_to_high))
 	{
 	    uint8_t data = xd_data (c, channels);
-	    //printf ("read\n");
+	    //time_log(c, "read\n");
 	    if (capture_bit_name (c, ALE_NAME, channels) || capture_bit_name (c, CLE_NAME,  channels))
-		printf ("WARNING: READ WHILE IN ALE/CLE\n");
+		time_log(c, "WARNING: READ WHILE IN ALE/CLE\n");
 
 	    data_buffer[data_len] = data;
 	    data_len++;
